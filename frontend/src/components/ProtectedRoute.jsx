@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
-import { Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 import useAuthStore from "../store/useAuthStore";
 import { Spinner } from "./ui";
@@ -13,12 +14,17 @@ function ProtectedRoute({ children }) {
   const { isAuthenticated, isLoading } = useAuthStore();
   const location = useLocation();
 
+  const target = `/login/?next=${encodeURIComponent(location.pathname + location.search)}`;
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) window.location.replace(target);
+  }, [isLoading, isAuthenticated, target]);
+
   if (isLoading) {
     return <Spinner label="در حال بررسی ورود…" />;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login/" state={{ from: location.pathname + location.search }} replace />;
+    return null;
   }
 
   return children;

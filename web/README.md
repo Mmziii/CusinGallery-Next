@@ -1,4 +1,4 @@
-# Phases 1–2: Next home + server-rendered catalog
+# Phases 1–3a: Next home, catalog, auth, account and wishlist
 
 JavaScript App Router, Next 16.4.2, standalone output. All dependencies/assets are local to `web/`; there are no imports from `frontend/`. The SPA and the Django backend keep working unchanged; the migration is page by page.
 
@@ -10,8 +10,11 @@ JavaScript App Router, Next 16.4.2, standalone output. All dependencies/assets a
 | `/shop/` (with `?category=`, `?brand=`, `?search=`, `?min_price=`, `?max_price=`, `?in_stock=`, `?on_sale=`, `?ordering=`, `?page=`, `?attr_<slug>=`) | `app/shop/page.js` + `shop/ShopView.jsx` |
 | `/products/<slug>/` | `app/products/[slug]/page.js` + `product/ProductDetail.jsx` |
 | `/brands/<slug>/` | `app/brands/[slug]/page.js` (same listing view, brand-scoped) |
+| `/login/`, `/register/`, `/password-reset/`, `/reset-password/confirm/` | `app/` server gates + `auth/` original SPA client forms |
+| `/account/`, `/account/orders/`, `/account/orders/<id>/`, `/account/addresses/`, `/account/reviews/` | `app/account/` + `auth/account/` |
+| `/wishlist/` | `app/wishlist/` + `auth/WishlistPage.jsx` |
 
-Everything else (cart, checkout, account, auth, wishlist, info pages) is still the Vite SPA in `frontend/`.
+Cart, checkout, payment result and info pages remain the Vite SPA in `frontend/`. API, admin and payment callbacks remain Django.
 
 ## Files and boundaries
 
@@ -36,7 +39,7 @@ Everything else (cart, checkout, account, auth, wishlist, info pages) is still t
 
 ## Routing and deployment
 
-Nginx (all three configs: `nginx/conf.d/cusin.conf`, `nginx/prod.d/cusin.conf`, `nginx/prod.d/00-bootstrap-http.conf.example`) sends `/shop/`, `/products/<slug>/`, `/brands/<slug>/`, `/` and `/_next/` to `web:3000` with `Host $http_host` and the `X-Forwarded-*` chain; `/robots.txt` and `/sitemap.xml` stay on Django and every other page stays on the SPA container. The old User-Agent `map` and the `/seo/...` rewrites are gone: Next serves real HTML to bots and humans alike.
+Nginx (all three configs: `nginx/conf.d/cusin.conf`, `nginx/prod.d/cusin.conf`, `nginx/prod.d/00-bootstrap-http.conf.example`) sends `/shop/`, `/products/<slug>/`, `/brands/<slug>/`, `/` and `/_next/` to `web:3000` with `Host $http_host` and the `X-Forwarded-*` chain; `/robots.txt` and `/sitemap.xml` stay on Django and the phase-3a auth/account/wishlist prefixes also reach `web:3000`; remaining page routes stay with the SPA. The old User-Agent `map` and the `/seo/...` rewrites are gone: Next serves real HTML to bots and humans alike.
 
 `next.config.mjs` sets `trailingSlash: true`, so `/shop/`, `/products/<slug>/` and `/brands/<slug>/` keep the exact URL shape the storefront always had (old links, the Django sitemap and the canonicals stay valid); `/shop` 308-redirects to `/shop/`.
 
@@ -45,8 +48,8 @@ Runtime: `INTERNAL_API_URL=http://backend:8000`; `SITE_ORIGIN` (or `NEXT_PUBLIC_
 ```sh
 cd web
 npm ci
-npm test
 npm run build
+npm test
 ```
 
 ## Parity notes / deliberate differences
@@ -62,10 +65,59 @@ npm run build
 - Daily deals and banners are read on **every** render (public, cookie-free, uncached): an owner edit appears immediately and the countdown's `server_now` base is never stale. Products, categories, brands and settings keep the 60-second public cache.
 - Full document navigation between the two apps is intentional: `frontend/src/utils/nextRoutes.jsx` is the SPA's single switchboard, so links to `/`, `/shop/…`, `/products/…`, `/brands/…` leave the SPA instead of rendering its retired copies.
 
-## Verification
+## Phase 1–2 verification (historical)
 
 - `npm run build`: passed; `/`, `/shop`, `/products/[slug]`, `/brands/[slug]`, `/not-found-page` are dynamic (server-rendered on demand) and `proxy.js` builds as `ƒ Proxy (Middleware)`.
 - `npm test`: 55 tests passed (7 files) — shop HTML from query params, unchanged filter forwarding, standard pagination (`?page=3` = items 41-60 with ONE listing request, `?page=8` = 141-160, `?page=99` → 308 to page 8 with one extra request, invalid `?page` → 308 with none), product HTML + IRR JSON-LD, real 404s (product and brand), canonicals + `noindex, follow` + `rel=prev/next` on paged listings, the uncached-deals/60s-products split, the failed-API fallback, and a jsdom suite for the phone's «نمایش کالاهای بیشتر» (requests page N+1 with the same filters through the client API, appends into its own grid, rewrites the URL with replaceState, hides itself on `next: null`, drops an in-flight page when the filters change). The phase-2 live fixes added three suites: the load-more/pager CSS contract resolved at 320-1440px (it fails if any later rule re-hides a phone control), the proxy's 404 contract (rewrite + status, fail-open on upstream errors, RSC passthrough) with the 404 document rendered inside the header/footer shell, and the real-HTTP slug check (Host forwarding, 404 vs 500/timeout, one lookup per minute, single-flight).
 - Live smoke test (`next start` + a fake Django of 160 products + `curl`): `/shop/` 200, `/products/copper-pot/` 200, `/brands/mes-karan/` 200, `/products/unknown-product/` 404, `/brands/nope/` 404, `/shop` 308 → `/shop/`, title/canonical/OpenGraph/JSON-LD present in the HTML. The unknown-slug 404s are now **full documents**: status 404, `<html lang="fa" dir="rtl">`, `class="app-shell"`/`site-header`/`site-footer`, the Persian 404 (`class="notfound"`, «۴۰۴», «صفحه مورد نظر پیدا نشد») and «یافت نشد» in `<title>` — all without JavaScript (checked by curling the body and ignoring the RSC payload). `?page=3` carries exactly products 41-60 and `?page=8` exactly 141-160, one listing request each; `/shop/?page=99` → 308 `/shop/?page=8` and `/brands/mes-karan/?page=77` → 308 `/brands/mes-karan/?page=8` (one page-1 request for `count`); `/shop/?page=abc` → 308 `/shop/` with no upstream call; paged HTML carries `<meta name="robots" content="noindex, follow">`, the page-less canonical, and `rel="prev"/"next"`.
 - `frontend`: `npm test` 697 tests passed (includes the new `nextRoutes` helper suite); two SPA tests that asserted in-app navigation to `/` were updated to assert the document-link contract.
 - No lint configuration added. No Playwright, real browser, backend suite or Docker run in this workspace, so live Nginx/Compose validation remains a deployment check.
+
+## Phase 3a auth/private boundaries
+
+- Every protected page calls `requireUser()` in its server component; this uses
+  `apiServer("/api/v1/accounts/me/", { privateData: true })`. The `React.cache`
+  wrapper deduplicates only inside a render (root header + page). It is **not**
+  a shared cache. Cookies never enter `unstable_cache`.
+- Confirmed anonymous visitors get a 307 to `/login/?next=<path+query>`;
+  unreachable Django is unknown, not anonymous, so the page renders and its
+  client guard decides. Client me-probe failures preserve an already known user.
+- `proxy.js` overwrites the internal original-URL header (including raw search),
+  and sets `Cache-Control: private, no-store` plus `X-Robots-Tag: noindex, follow`
+  for auth/account/wishlist routes. All new pages are force-dynamic with matching
+  robots metadata. Page-specific data stays client-side with the SPA skeletons.
+- `AuthProvider` creates a per-request store initialized **before** SSR (Zustand
+  reads initial state for its server snapshot). No user is written to a global
+  server store. This gives protected documents their account header on first
+  paint; page probes also seed the persistent client layout before paint.
+- Login/register share `safeNext`: single leading slash, no backslash/control
+  characters, same-origin URL only; invalid next falls back to `/`. Successful
+  login and registration keep cart merging and navigate through the migration
+  shim, which uses document navigation to SPA-owned cart/checkout.
+- Reset email links keep `?uid=...&token=...`; SMS keeps
+  `?mode=code&phone=...` and the original request payloads.
+- Account/wishlist/forms, address validation/combobox and styled confirmation
+  dialogs preserve the SPA markup/classes/text. Only router/metadata plumbing
+  and the required query-based next flow differ. Order 404 keeps the SPA's
+  existing `ErrorState` view (not the public catalog 404 design).
+- All three Nginx stacks route the new prefixes to `web:3000` with the same
+  public Host and forwarding headers as catalog locations. Django runtime is
+  unchanged; only its Nginx configuration tests are extended.
+
+### Phase 3a verification
+
+`npm run build && npm test`: passed, **134 tests across 12 files**.
+
+Run **build before tests**: `authHttp.test.jsx` starts production Next against a
+real `node:http` fake Django, and shuts both down afterwards. No browser or
+backend suite is required. Other new suites cover source/markup parity, order
+404 rendering, login/register success and safe next, reset form payloads, SPA
+handoff, and all three Nginx files.
+
+The targeted frontend command is:
+`cd frontend && npm test -- src/components/ProtectedRoute src/utils/nextRoutes`.
+It currently reports **20 passing, 2 failing**: the pre-existing phase-2 tests
+still assert `/account/orders/` and `/login/` are SPA-owned. They are deliberately
+not edited because phase 3a permits only `ProtectedRoute.jsx` and `nextRoutes.jsx`
+to change under `frontend/`. The phase-3a contracts are checked in `web/tests/`.
+No Playwright, browser, backend suite, Docker or live Nginx was run.

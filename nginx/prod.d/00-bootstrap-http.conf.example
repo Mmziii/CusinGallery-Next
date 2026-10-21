@@ -255,14 +255,68 @@ server {
     }
 
     # --- Storefront pages: Django owns the decision ----------------------
-    # Every page request goes to the catch-all view (apps/core/spa.py): a
+    # Remaining page requests go to the catch-all view (apps/core/spa.py): a
     # real page answers with the built index.html and status 200, anything
     # else with the same Persian document and a REAL 404 (plus
     # <meta name="robots" content="noindex">). nginx used to answer every
     # path with the shell and status 200 -- a soft 404.
-    # Phases 1-2: home, the catalog pages (shop/product/brand -- see the
-    # locations above) and the Next build output leave the SPA path; the
-    # cart/checkout/account/auth/info pages below still answer here.
+    # Phases 1-3a: home, catalog (see above), auth, account, wishlist
+    # and the Next build output leave the SPA path; the
+    # cart/checkout/payment/info pages below still answer here.
+    location ~ ^/login/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/register/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/password-reset/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/reset-password(?:/.*)?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/account(?:/.*)?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/wishlist/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
     location = / {
         proxy_pass http://web:3000;
         proxy_set_header Host $http_host;
