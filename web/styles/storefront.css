@@ -3025,7 +3025,15 @@ input, select, textarea { min-width: 0; max-width: 100%; }
   .shop__main { min-width: 0; }
 }
 
-.shop__load-more { display: none; }
+/* The desktop half of the rule above: hidden from 768px up, where the numbered
+   pager takes over. It MUST stay inside this media query. Written
+   unconditionally it sits later in the file than the phone rule, so with the
+   same specificity it won the cascade at phone widths too and the
+   «نمایش کالاهای بیشتر» button never appeared on a phone (the pagination is
+   hidden there, so phones could only ever see page 1). */
+@media (min-width: 768px) {
+  .shop__load-more { display: none; }
+}
 
 /* Bottom sheets (filters + sorting) */
 .sheet {

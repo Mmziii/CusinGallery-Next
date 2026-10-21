@@ -1,101 +1,10 @@
-import { request as httpRequest } from "node:http";
-import { request as httpsRequest } from "node:https";
 import { headers } from "next/headers";
 import { unstable_cache } from "next/cache";
 import { cache } from "react";
 import { normalizeContent } from "../content/defaults";
+import { djangoRequest } from "./django-request";
 
-const REQUEST_TIMEOUT_MS = 20000;
 const PUBLIC_REVALIDATE_SECONDS = 60;
-
-// One concise server-side line per failure: path + status/cause, never the body.
-function logFailure(path, detail) {
-  console.error(`[api-server] GET ${path} failed: ${detail}`);
-}
-
-// Server-side GET to Django built on node:http(s) — deliberately NOT fetch:
-// undici silently drops a user-supplied Host header and sends the URL's
-// authority instead (e.g. "backend:8000"), which Django rejects with
-// DisallowedHost (400). http.request with `setHost: false` sends the incoming
-// public Host verbatim, so Django validates it against ALLOWED_HOSTS and builds
-// absolute media/image URLs against the public origin. Do not "simplify" this
-// back to fetch. Follows no redirects (3xx is treated as an error below).
-function djangoRequest(path, { host, proto, forwardedFor, cookie }) {
-  return new Promise((resolve, reject) => {
-    const base = new URL(process.env.INTERNAL_API_URL || "http://backend:8000");
-    const target = new URL(path, base);
-    const isHttps = target.protocol === "https:";
-    const requestHeaders = {
-      Host: host,
-      "X-Forwarded-Proto": proto,
-      Accept: "application/json",
-      // node:http does not decompress; ask the internal upstream for identity.
-      "Accept-Encoding": "identity",
-    };
-    if (forwardedFor) requestHeaders["X-Forwarded-For"] = forwardedFor;
-    if (cookie) requestHeaders.Cookie = cookie;
-
-    let settled = false;
-    const fail = (error, logDetail = error.code || error.message) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(deadline);
-      logFailure(path, logDetail);
-      reject(error);
-    };
-
-    const req = (isHttps ? httpsRequest : httpRequest)(
-      {
-        protocol: target.protocol,
-        hostname: target.hostname,
-        port: target.port || (isHttps ? 443 : 80),
-        path: target.pathname + target.search,
-        method: "GET",
-        headers: requestHeaders,
-        setHost: false,
-        timeout: REQUEST_TIMEOUT_MS,
-        // TLS SNI/verification must use the internal name, not the public Host.
-        ...(isHttps ? { servername: target.hostname } : {}),
-      },
-      (res) => {
-        const chunks = [];
-        res.on("data", (chunk) => chunks.push(chunk));
-        res.on("error", (error) => fail(error));
-        res.on("end", () => {
-          if (settled) return;
-          const status = res.statusCode || 0;
-          if (status < 200 || status >= 300) {
-            // Body is discarded on purpose: it is neither parsed nor logged.
-            // The status rides along on the error so callers can turn a 404
-            // into a real not-found page without parsing the message.
-            const error = new Error(`Django ${path}: ${status}`);
-            error.status = status;
-            fail(error, status);
-            return;
-          }
-          settled = true;
-          clearTimeout(deadline);
-          try {
-            resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-          } catch {
-            logFailure(path, `${status} invalid JSON`);
-            reject(new Error(`Django ${path}: ${status} invalid JSON`));
-          }
-        });
-      }
-    );
-    // Total deadline (AbortSignal.timeout equivalent), on top of the socket
-    // inactivity timeout above. destroy() re-enters via the "error" handler.
-    const deadline = setTimeout(
-      () => req.destroy(new Error(`Django ${path}: timeout`)),
-      REQUEST_TIMEOUT_MS
-    );
-    deadline.unref?.();
-    req.on("timeout", () => req.destroy(new Error(`Django ${path}: timeout`)));
-    req.on("error", (error) => fail(error, error.code || (error.message.includes("timeout") ? "timeout" : error.message)));
-    req.end();
-  });
-}
 
 // Public calls never forward cookies. Opt-in private calls are never cached.
 // `noCache` is the other uncached mode: a PUBLIC (cookie-free) call that must
