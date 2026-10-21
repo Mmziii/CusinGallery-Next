@@ -7,12 +7,12 @@ import {
   getShopData,
   isNotFound,
   parseShopParams,
-  readShopPage,
-  shopPageHref,
+  shopHref,
 } from "../../../lib/catalog-server";
 import { getSite } from "../../../lib/api-server";
 import { brandMetadata } from "../../../lib/metadata";
 import { breadcrumbJsonLd } from "../../../lib/jsonld";
+import { readShopPage, totalPages } from "../../../utils/shopPaging";
 import { faDigits } from "../../../utils/faDigits";
 
 export const dynamic = "force-dynamic";
@@ -44,21 +44,17 @@ export default async function BrandPage({ params, searchParams }) {
 
   const query = (await searchParams) || {};
   const shopParams = parseShopParams(query, { brandSlug: slug });
+  const basePath = `/brands/${encodeURIComponent(slug)}/`;
 
-  // Same ?page= guard as /shop/: cap at MAX_SHOP_PAGES and normalise anything
-  // malformed, before any listing request is issued.
-  const { page, redirect } = readShopPage(shopParams.page);
-  if (redirect !== null) {
-    permanentRedirect(
-      shopPageHref(`/brands/${encodeURIComponent(slug)}/`, shopParams, {
-        page: redirect === "drop" ? null : redirect,
-        fixedBrand: brand,
-      })
-    );
-  }
-  if (shopParams.page !== undefined) shopParams.page = String(page);
+  // Same page contract as /shop/: invalid spellings 308 to the page-less URL,
+  // a page past the end 308s to the real last page. Nothing here loops.
+  const { page, invalid } = readShopPage(shopParams.page);
+  if (invalid) permanentRedirect(shopHref(basePath, shopParams, { fixedBrand: brand }));
 
-  const data = await getShopData(shopParams, { fixedBrand: brand });
+  const data = await getShopData(shopParams, { fixedBrand: brand, basePath });
+  if (data.redirectTo) permanentRedirect(data.redirectTo);
+
+  const pages = totalPages(data.products?.count);
 
   const trail = [
     { label: "کازین گالری", to: "/" },
@@ -69,6 +65,15 @@ export default async function BrandPage({ params, searchParams }) {
   return (
     <>
       <JsonLd id="breadcrumb-jsonld" data={breadcrumbJsonLd(trail)} />
+      {page > 1 ? (
+        <link
+          rel="prev"
+          href={shopHref(basePath, shopParams, { page: page - 1, fixedBrand: brand })}
+        />
+      ) : null}
+      {pages > page ? (
+        <link rel="next" href={shopHref(basePath, shopParams, { page: page + 1, fixedBrand: brand })} />
+      ) : null}
       <ShopView
         params={shopParams}
         fixedBrand={brand}

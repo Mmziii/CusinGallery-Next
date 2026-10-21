@@ -18,6 +18,8 @@ import { isTruthyParam } from "../utils/queryFlags";
 import { brandUrl } from "../utils/brands";
 import { categoryChain, categoryUrl } from "../utils/categories";
 import { trackEvent } from "../utils/behaviour";
+import { pageWindow, readShopPage, shopHref, totalPages as totalPagesFor } from "../utils/shopPaging";
+import { listProducts } from "../services/catalogApi";
 
 /**
  * Catalog listing, server-rendered.
@@ -27,7 +29,10 @@ import { trackEvent } from "../utils/behaviour";
  *  - products / categories / brands / facets arrive as props from the server
  *    component (no fetch-on-mount, so the first paint already has the grid);
  *  - every filter, sort and page change writes the SAME query format to the
- *    URL (router.push) and the server re-renders the page;
+ *    URL and the server re-renders the page: the desktop pager navigates
+ *    (?page=N = page N, exactly the SPA's numbered links), while the phone's
+ *    «نمایش کالاهای بیشتر» appends the next page client-side and remembers it
+ *    with history.replaceState;
  *  - both responsive variants are in the HTML and CSS picks one: the filter
  *    sidebar is hidden below 768px by stylesheet, the phone toolbar is hidden
  *    above it, and both bottom sheets only exist while opened.
@@ -94,10 +99,30 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
   useFocusTrap(sortSheetRef, sortOpen, closeSort);
 
   const basePath = fixedBrand ? brandUrl(fixedBrand.slug) : "/shop/";
-  const currentPage = Math.max(1, Number(params.page) || 1);
-  const totalPages = products?.count ? Math.ceil(products.count / 20) : 0;
+  const currentPage = readShopPage(params.page).page;
+  const totalPages = totalPagesFor(products?.count);
+  // The server rendered THIS page and only this page (standard pagination).
   const results = products?.results || [];
   const failed = Boolean(products?.error);
+
+  // Phone «نمایش کالاهای بیشتر»: appended pages live here, keyed by the query
+  // they were loaded for. A new query (filter, sort or page -- new props) makes
+  // that key stale, so the appends, the spinner and the error simply stop
+  // applying: no effect, and no stale cards next to a fresh page.
+  const paramsKey = JSON.stringify(params);
+  const [moreState, setMoreState] = useState({ key: paramsKey, pages: [], loading: false, error: null });
+  const more =
+    moreState.key === paramsKey
+      ? moreState
+      : { key: paramsKey, pages: [], loading: false, error: null };
+  const extraResults = more.pages.flatMap((entry) => entry.results || []);
+  // `next` of the LAST page actually fetched: null hides the button.
+  const lastPayload = more.pages.length ? more.pages[more.pages.length - 1] : products;
+  const hasNextPage = Boolean(lastPayload?.next);
+  const nextPageNumber = (more.pages.length ? more.pages[more.pages.length - 1].page : currentPage) + 1;
+  // Lets an in-flight request notice that the query changed under it.
+  const paramsKeyRef = useRef(paramsKey);
+  paramsKeyRef.current = paramsKey;
 
   /** Write a new filter set to the URL; the server component re-renders. */
   const pushParams = useCallback(
@@ -118,17 +143,56 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
     return next;
   }, [params, fixedBrand]);
 
-  const hrefFor = useCallback((next) => {
-    const query = next.toString();
-    return query ? `${basePath}?${query}` : basePath;
-  }, [basePath]);
+  /**
+   * Pagination links: one ?page=N per page, page 1 as the page-less URL.
+   * These are real anchors, so a numbered link is a normal navigation with a
+   * crawlable, shareable URL -- every page 1..N works.
+   */
+  const pageHref = useCallback(
+    (page) => shopHref(basePath, params, { page, fixedBrand }),
+    [basePath, params, fixedBrand]
+  );
 
-  /** Pagination/load-more links: the same ?page=N contract the SPA links used. */
-  const pageHref = useCallback((page) => {
-    const next = currentParams();
-    next.set("page", String(page));
-    return hrefFor(next);
-  }, [currentParams, hrefFor]);
+  /**
+   * Phone «نمایش کالاهای بیشتر»: fetch the NEXT page from the public API with
+   * exactly the filters in the URL, append its cards under the ones already on
+   * screen, and rewrite the address bar to ?page=<that page> (replaceState, so
+   * Back still leaves the listing) -- a refresh or a shared link lands on the
+   * same page. The desktop grid is a separate element and is unaffected.
+   */
+  const loadMore = async () => {
+    if (more.loading || !hasNextPage) return;
+    const requestedKey = paramsKey;
+    const page = nextPageNumber;
+    setMoreState((previous) => ({
+      key: requestedKey,
+      pages: previous.key === requestedKey ? previous.pages : [],
+      loading: true,
+      error: null,
+    }));
+    try {
+      const data = await listProducts({ ...params, page: String(page) });
+      // The visitor changed filters while this page was in flight: drop it.
+      if (paramsKeyRef.current !== requestedKey) return;
+      setMoreState((previous) => ({
+        key: requestedKey,
+        pages:
+          previous.key === requestedKey
+            ? [...previous.pages, { page, results: data.results || [], next: data.next }]
+            : [],
+        loading: false,
+        error: null,
+      }));
+      // The address bar now names this page (no navigation, no re-render):
+      // a refresh or a shared link lands on it.
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", pageHref(page));
+      }
+    } catch (error) {
+      if (paramsKeyRef.current !== requestedKey) return;
+      setMoreState({ key: requestedKey, pages: [], loading: false, error });
+    }
+  };
 
   const setParam = (key, value) => {
     const next = currentParams();
@@ -179,7 +243,6 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
 
   // Part S2 item 7: preserve scroll position when the browser goes BACK to
   // this listing (a fresh filter change starts at the saved offset too).
-  const paramsKey = JSON.stringify(params);
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const key = `cusin.shop.scroll.${fixedBrand?.slug || ""}.${window.location.search}`;
@@ -571,19 +634,45 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
                 ))}
               </div>
             )}
+
+            {/* Phones only: the pages appended by «نمایش کالاهای بیشتر».
+                A separate grid, so the desktop list (page N) is identical to
+                what the server rendered even after appends. Hidden above
+                767px by styles/responsive-variants.css. */}
+            <div className={`product-grid shop__more-grid${extraResults.length ? "" : " shop__more-grid--empty"}`}>
+              {extraResults.map((product, index) => (
+                <div
+                  className="product-grid__cell"
+                  key={`${paramsKey}-more-${product.id}`}
+                  style={{ animationDelay: `${Math.min(index, MAX_STAGGER_STEPS) * 20}ms` }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
           </div>
         ) : null}
 
-        {/* Phones: one «نمایش کالاهای بیشتر» button that walks the SAME
-            ?page= URLs the numbered links use (so links stay shareable and
-            the back button keeps working). Hidden above 768px by CSS. */}
-        {!failed && totalPages > currentPage ? (
-          <a
+        {more.error ? (
+          <p className="shop__load-more-error" role="alert">
+            دریافت کالاهای بیشتر انجام نشد. دوباره تلاش کنید.
+          </p>
+        ) : null}
+
+        {/* Phones: «نمایش کالاهای بیشتر» appends the NEXT page in the browser
+            (same filters, relative API URL) and rewrites the address bar with
+            replaceState. Hidden above 768px by CSS; hidden entirely once the
+            API says there is no next page. */}
+        {!failed && hasNextPage ? (
+          <button
+            type="button"
             className="btn btn--outline shop__load-more"
-            href={pageHref(currentPage + 1)}
+            onClick={loadMore}
+            disabled={more.loading}
+            aria-busy={more.loading || undefined}
           >
-            نمایش کالاهای بیشتر
-          </a>
+            {more.loading ? "در حال دریافت…" : "نمایش کالاهای بیشتر"}
+          </button>
         ) : null}
 
         {!failed && totalPages > 1 ? (
@@ -593,18 +682,16 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
             ) : (
               <span aria-disabled="true">قبلی</span>
             )}
-            {Array.from({ length: totalPages }, (_, index) => index + 1)
-              .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 2)
-              .map((page) => (
-                <a
-                  key={page}
-                  aria-current={page === currentPage ? "page" : undefined}
-                  href={pageHref(page)}
-                >
-                  {faDigits(page)}
-                </a>
-              ))}
-            <span>صفحه {faDigits(params.page || 1)} از {faDigits(totalPages)}</span>
+            {pageWindow(currentPage, totalPages).map((page) => (
+              <a
+                key={page}
+                aria-current={page === currentPage ? "page" : undefined}
+                href={pageHref(page)}
+              >
+                {faDigits(page)}
+              </a>
+            ))}
+            <span>صفحه {faDigits(currentPage)} از {faDigits(totalPages)}</span>
             {currentPage < totalPages ? (
               <a href={pageHref(currentPage + 1)}>بعدی</a>
             ) : (
@@ -619,6 +706,8 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
 
 const productsShape = PropTypes.shape({
   count: PropTypes.number,
+  next: PropTypes.string,
+  previous: PropTypes.string,
   results: PropTypes.array,
   price_bounds: PropTypes.object,
   price_range: PropTypes.object,

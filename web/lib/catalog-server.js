@@ -1,4 +1,5 @@
 import { apiServer, allPages } from "./api-server";
+import { readShopPage, SHOP_PAGE_SIZE, shopHref } from "../utils/shopPaging";
 
 /**
  * Server-side catalog reads for the SSR shop / product / brand pages.
@@ -23,15 +24,6 @@ export const SHOP_FILTER_KEYS = [
   "ordering",
   "page",
 ];
-
-/**
- * Hard ceiling for the "first N pages" pager. `?page=N` concatenates pages
- * 1..N, so it used to fan out into N parallel Django calls -- an unbounded
- * (and crawler-reachable) amplification. Five pages (100 products at the
- * backend's 20/page) is the deepest link that is still served in one render;
- * anything deeper is redirected down to it.
- */
-export const MAX_SHOP_PAGES = 5;
 
 const single = (value) => (Array.isArray(value) ? value[value.length - 1] : value);
 
@@ -69,47 +61,6 @@ const withQuery = (path, params) => {
   return query ? `${path}?${query}` : path;
 };
 
-/**
- * Validates `?page=N` BEFORE any Django call.
- *
- * Returns `{ page, redirect }`:
- *   - `redirect: null`         -> serve this request as-is (`page` is 1..MAX)
- *   - `redirect: MAX_SHOP_PAGES` -> 308 the same URL down to the last page
- *   - `redirect: "drop"`       -> 308 the same URL without `?page=`
- *
- * Only a plain positive integer is a page. "0", "-2", "3.5", "abc" and empty
- * values are invalid (not "page 1"), so they are redirected to the canonical
- * page-less URL instead of being silently rendered -- crawlers then never keep
- * an endless supply of junk `?page=` URLs alive.
- */
-export function readShopPage(raw) {
-  if (raw === undefined || raw === null || raw === "") return { page: 1, redirect: null };
-  const text = String(raw).trim();
-  if (!/^\d+$/.test(text)) return { page: 1, redirect: "drop" };
-  const page = Number(text);
-  if (!Number.isSafeInteger(page) || page < 1) return { page: 1, redirect: "drop" };
-  if (page > MAX_SHOP_PAGES) return { page: MAX_SHOP_PAGES, redirect: MAX_SHOP_PAGES };
-  return { page, redirect: null };
-}
-
-/**
- * Same-listing URL for a given page, page 1 without any `?page=` parameter.
- * Used for the redirects above, so the query format stays the SPA's (and a
- * brand page's fixed scope stays on the path instead of becoming ?brand=).
- */
-export function shopPageHref(basePath, params = {}, { page = null, fixedBrand = null } = {}) {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (key === "page") continue;
-    if (fixedBrand && key === "brand") continue;
-    if (value === undefined || value === null || value === "") continue;
-    query.set(key, String(value));
-  }
-  if (page && page > 1) query.set("page", String(page));
-  const next = query.toString();
-  return next ? `${basePath}?${next}` : basePath;
-}
-
 export const listProducts = (params = {}) => apiServer(withQuery("/api/v1/products/", params));
 export const listFacets = (params = {}) => allPages(withQuery("/api/v1/products/facets/", params));
 export const listCategories = () => allPages("/api/v1/categories/");
@@ -117,40 +68,62 @@ export const listBrands = () => allPages("/api/v1/brands/");
 export const getBrand = (slug) => apiServer(`/api/v1/brands/${encodeURIComponent(slug)}/`);
 export const getProduct = (slug) => apiServer(`/api/v1/products/${encodeURIComponent(slug)}/`);
 
+export { readShopPage, shopHref, SHOP_PAGE_SIZE };
+
 /** True for a Django 404 (unknown/inactive slug, unknown category...). */
 export function isNotFound(error) {
   return error?.status === 404 || /: 404$/.test(String(error?.message || ""));
 }
 
 /**
- * The listing itself. `?page=N` means "the first N pages" (SEO + back button):
- * page 1 keeps the single request it always had, deeper links concatenate the
- * pages 1..N exactly like the SPA's «نمایش کالاهای بیشتر». N is capped by
- * MAX_SHOP_PAGES before this is called, and the walk is SEQUENTIAL: it stops at
- * the first page Django marks as the last (`next === null`) or answers 404,
- * so no request is ever fired past the real end of the listing.
+ * The listing itself: exactly ONE Django request, for the requested page and
+ * nothing else. Standard pagination replaced the old "first N pages" model
+ * (which fetched pages 1..N and concatenated them): page 3 shows products
+ * 41-60, page 8 shows 141-160, and the desktop pager can walk all 8 pages.
+ *
+ * A page past the end is a DRF 404 ("Invalid page"). Rather than showing an
+ * empty grid -- or, worse, walking pages until one works -- we read `count`
+ * with ONE extra request (page 1) and hand the caller a 308 target: the real
+ * last page. The target is always < the requested page (or the page-less URL),
+ * so a redirect can never loop.
  */
-export async function getShopProducts(params = {}) {
-  const requested = Math.trunc(Number(params.page) || 1);
-  const pageCount = Math.min(Math.max(1, requested), MAX_SHOP_PAGES);
-  if (pageCount <= 1) return listProducts(params);
-
-  const pages = [];
-  for (let page = 1; page <= pageCount; page += 1) {
-    let data;
-    try {
-      data = await listProducts({ ...params, page });
-    } catch (error) {
-      // Page 1 failing is a real outage (retry state); a later page failing
-      // means we walked past the end -- keep what exists and render it.
-      if (page === 1) throw error;
-      break;
-    }
-    pages.push(data);
-    if (!data || !data.next) break;
+export async function getShopProducts(params = {}, { basePath = "/shop/", fixedBrand = null } = {}) {
+  const { page } = readShopPage(params.page);
+  // Only the integer spelling reaches Django; "?page=" never does for page 1.
+  const request = page > 1 ? { ...params, page: String(page) } : withoutPage(params);
+  try {
+    return await listProducts(request);
+  } catch (error) {
+    if (page <= 1 || !isNotFound(error)) throw error;
+    const lastPage = await lastShopPage(params);
+    return {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+      redirectTo: shopHref(basePath, params, { page: lastPage, fixedBrand }),
+    };
   }
-  const last = pages[pages.length - 1] || {};
-  return { ...last, results: pages.flatMap((page) => page.results || []), next: null };
+}
+
+/** Removes `page` entirely, so page 1 keeps its single plain request. */
+function withoutPage(params = {}) {
+  if (params.page === undefined) return params;
+  const { page, ...rest } = params;
+  return rest;
+}
+
+/** The real last page of the listing, from ONE page-1 request. */
+async function lastShopPage(params = {}) {
+  try {
+    const first = await listProducts(withoutPage(params));
+    const total = Math.ceil(Number(first?.count) / SHOP_PAGE_SIZE);
+    return Number.isFinite(total) && total > 1 ? total : null;
+  } catch {
+    // The listing itself is down: land on the canonical first page, whose
+    // render will show the normal retry state instead of a redirect loop.
+    return null;
+  }
 }
 
 /** Facets re-scope to the selected category/brand, like the SPA. */
@@ -162,9 +135,14 @@ export function getShopFacets(params = {}) {
 }
 
 /** Everything the shop page renders, resolved in parallel. */
-export async function getShopData(params = {}, { fixedBrand = null } = {}) {
+export async function getShopData(params = {}, { fixedBrand = null, basePath } = {}) {
+  const listingPath = basePath || (fixedBrand ? `/brands/${encodeURIComponent(fixedBrand.slug)}/` : "/shop/");
   const [products, categories, brands, facets] = await Promise.all([
-    getShopProducts(params).catch((error) => ({ error, results: [], count: 0 })),
+    getShopProducts(params, { basePath: listingPath, fixedBrand }).catch((error) => ({
+      error,
+      results: [],
+      count: 0,
+    })),
     listCategories().catch(() => ({ results: [] })),
     listBrands().catch(() => ({ results: [] })),
     getShopFacets(params).catch(() => ({ results: [] })),
@@ -172,6 +150,8 @@ export async function getShopData(params = {}, { fixedBrand = null } = {}) {
   return {
     params,
     fixedBrand,
+    // Set when the requested page is past the end: the caller 308s to it.
+    redirectTo: products.redirectTo || null,
     products,
     categories: categories.results || [],
     brands: brands.results || [],

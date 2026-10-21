@@ -297,21 +297,29 @@ BreadcrumbList) داخل همان HTML اولیه هستند. بنابراین �
 رندر می‌شود؛ کد وضعیت از همان درخواست اول ۴۰۴ است و خود Next تگ
 `<meta name="robots" content="noindex">` را اضافه می‌کند.)
 
-`?page=N` در `/shop/` و `/brands/<slug>/` فقط تا **۵ صفحه** (۱۰۰ کالا با
-۲۰ کالا در هر صفحه) باز می‌شود: صفحه‌های عمیق‌تر با **۳۰۸** به همان آدرس با
-`page=5` و مقدار نامعتبر (`abc`، `0`، منفی) با **۳۰۸** به همان آدرس بدون
-`page` هدایت می‌شوند، و در هر دو حالت **هیچ درخواستی** به جنگو فرستاده نمی‌شود.
-صفحه‌بندی هم ترتیبی است و به محض `next=null` یا ۴۰۴ جنگو متوقف می‌شود، پس
-هیچ‌گاه فراتر از آخرین صفحهٔ واقعی درخواستی ارسال نمی‌گردد. صفحه‌های `?page>1`
-تگ `noindex, follow` می‌گیرند و canonical آن‌ها همان آدرس بدون `page` است.
+صفحه‌بندی در `/shop/` و `/brands/<slug>/` **استاندارد** است: `?page=N` فقط
+همان صفحهٔ N را با **یک** درخواست به جنگو رندر می‌کند (صفحهٔ ۳ کالاهای ۴۱–۶۰،
+صفحهٔ ۸ کالاهای ۱۴۱–۱۶۰)، و همهٔ صفحه‌ها در دسکتاپ با لینک‌های شماره‌دار در
+دسترس‌اند. مقدار نامعتبر (`abc`، `0`، منفی، اعشاری) با **۳۰۸** به همان آدرس
+بدون `page` هدایت می‌شود و **هیچ درخواستی** به جنگو نمی‌رود؛ صفحهٔ بعد از آخرین
+صفحه با **۳۰۸** به آخرین صفحهٔ واقعی می‌رود (حداکثر یک درخواست اضافه برای
+خواندن `count`) و هرگز حلقه نمی‌سازد.
+
+در موبایل دکمهٔ «نمایش کالاهای بیشتر» صفحهٔ بعد را در مرورگر (axios با آدرس
+نسبی `/api/v1/products/` و همان فیلترها) می‌گیرد و به لیست اضافه می‌کند و آدرس
+را با `history.replaceState` به `?page=N` تغییر می‌دهد؛ با `next=null` ناپدید
+می‌شود و لیست دسکتاپ (همان صفحهٔ N) دست‌نخورده می‌ماند. صفحه‌های `?page>1`
+تگ `noindex, follow` می‌گیرند، canonical همان آدرس بدون `page` است و تگ‌های
+`<link rel="prev">` / `<link rel="next">` هم در HTML قرار می‌گیرند.
 
 آزمایش دستی:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://cusin.ir/shop/            # 200
 curl -s -o /dev/null -w "%{http_code}\n" https://cusin.ir/products/nope/   # 404
-curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "https://cusin.ir/shop/?page=1000"  # 308 …?page=5
-curl -s "https://cusin.ir/shop/?page=3" | grep -o '<meta name="robots"[^>]*>'                   # noindex, follow
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "https://cusin.ir/shop/?page=99"  # 308 …?page=8
+curl -s "https://cusin.ir/shop/?page=3" | grep -o '<meta name="robots"[^>]*>'                # noindex, follow
+curl -s "https://cusin.ir/shop/?page=3" | grep -o '<link rel="\(prev\|next\)"[^>]*>'      # prev=/shop/?page=2 …
 curl -s https://cusin.ir/products/<slug>/ | grep -o 'product-jsonld[^<]*'
 curl -A "WhatsApp/2.23" https://cusin.ir/products/<slug>/ | head -30          # همان HTML
 ```
