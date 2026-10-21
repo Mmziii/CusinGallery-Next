@@ -24,6 +24,15 @@ export const SHOP_FILTER_KEYS = [
   "page",
 ];
 
+/**
+ * Hard ceiling for the "first N pages" pager. `?page=N` concatenates pages
+ * 1..N, so it used to fan out into N parallel Django calls -- an unbounded
+ * (and crawler-reachable) amplification. Five pages (100 products at the
+ * backend's 20/page) is the deepest link that is still served in one render;
+ * anything deeper is redirected down to it.
+ */
+export const MAX_SHOP_PAGES = 5;
+
 const single = (value) => (Array.isArray(value) ? value[value.length - 1] : value);
 
 /**
@@ -60,6 +69,47 @@ const withQuery = (path, params) => {
   return query ? `${path}?${query}` : path;
 };
 
+/**
+ * Validates `?page=N` BEFORE any Django call.
+ *
+ * Returns `{ page, redirect }`:
+ *   - `redirect: null`         -> serve this request as-is (`page` is 1..MAX)
+ *   - `redirect: MAX_SHOP_PAGES` -> 308 the same URL down to the last page
+ *   - `redirect: "drop"`       -> 308 the same URL without `?page=`
+ *
+ * Only a plain positive integer is a page. "0", "-2", "3.5", "abc" and empty
+ * values are invalid (not "page 1"), so they are redirected to the canonical
+ * page-less URL instead of being silently rendered -- crawlers then never keep
+ * an endless supply of junk `?page=` URLs alive.
+ */
+export function readShopPage(raw) {
+  if (raw === undefined || raw === null || raw === "") return { page: 1, redirect: null };
+  const text = String(raw).trim();
+  if (!/^\d+$/.test(text)) return { page: 1, redirect: "drop" };
+  const page = Number(text);
+  if (!Number.isSafeInteger(page) || page < 1) return { page: 1, redirect: "drop" };
+  if (page > MAX_SHOP_PAGES) return { page: MAX_SHOP_PAGES, redirect: MAX_SHOP_PAGES };
+  return { page, redirect: null };
+}
+
+/**
+ * Same-listing URL for a given page, page 1 without any `?page=` parameter.
+ * Used for the redirects above, so the query format stays the SPA's (and a
+ * brand page's fixed scope stays on the path instead of becoming ?brand=).
+ */
+export function shopPageHref(basePath, params = {}, { page = null, fixedBrand = null } = {}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (key === "page") continue;
+    if (fixedBrand && key === "brand") continue;
+    if (value === undefined || value === null || value === "") continue;
+    query.set(key, String(value));
+  }
+  if (page && page > 1) query.set("page", String(page));
+  const next = query.toString();
+  return next ? `${basePath}?${next}` : basePath;
+}
+
 export const listProducts = (params = {}) => apiServer(withQuery("/api/v1/products/", params));
 export const listFacets = (params = {}) => allPages(withQuery("/api/v1/products/facets/", params));
 export const listCategories = () => allPages("/api/v1/categories/");
@@ -75,16 +125,32 @@ export function isNotFound(error) {
 /**
  * The listing itself. `?page=N` means "the first N pages" (SEO + back button):
  * page 1 keeps the single request it always had, deeper links concatenate the
- * pages 1..N exactly like the SPA's «نمایش کالاهای بیشتر».
+ * pages 1..N exactly like the SPA's «نمایش کالاهای بیشتر». N is capped by
+ * MAX_SHOP_PAGES before this is called, and the walk is SEQUENTIAL: it stops at
+ * the first page Django marks as the last (`next === null`) or answers 404,
+ * so no request is ever fired past the real end of the listing.
  */
 export async function getShopProducts(params = {}) {
-  const currentPage = Math.max(1, Number(params.page) || 1);
-  if (currentPage <= 1) return listProducts(params);
-  const pages = await Promise.all(
-    Array.from({ length: currentPage }, (_, index) => listProducts({ ...params, page: index + 1 }))
-  );
-  const last = pages[pages.length - 1];
-  return { ...last, results: pages.flatMap((page) => page.results || []) };
+  const requested = Math.trunc(Number(params.page) || 1);
+  const pageCount = Math.min(Math.max(1, requested), MAX_SHOP_PAGES);
+  if (pageCount <= 1) return listProducts(params);
+
+  const pages = [];
+  for (let page = 1; page <= pageCount; page += 1) {
+    let data;
+    try {
+      data = await listProducts({ ...params, page });
+    } catch (error) {
+      // Page 1 failing is a real outage (retry state); a later page failing
+      // means we walked past the end -- keep what exists and render it.
+      if (page === 1) throw error;
+      break;
+    }
+    pages.push(data);
+    if (!data || !data.next) break;
+  }
+  const last = pages[pages.length - 1] || {};
+  return { ...last, results: pages.flatMap((page) => page.results || []), next: null };
 }
 
 /** Facets re-scope to the selected category/brand, like the SPA. */

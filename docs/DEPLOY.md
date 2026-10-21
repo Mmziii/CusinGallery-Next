@@ -297,11 +297,21 @@ BreadcrumbList) داخل همان HTML اولیه هستند. بنابراین �
 رندر می‌شود؛ کد وضعیت از همان درخواست اول ۴۰۴ است و خود Next تگ
 `<meta name="robots" content="noindex">` را اضافه می‌کند.)
 
+`?page=N` در `/shop/` و `/brands/<slug>/` فقط تا **۵ صفحه** (۱۰۰ کالا با
+۲۰ کالا در هر صفحه) باز می‌شود: صفحه‌های عمیق‌تر با **۳۰۸** به همان آدرس با
+`page=5` و مقدار نامعتبر (`abc`، `0`، منفی) با **۳۰۸** به همان آدرس بدون
+`page` هدایت می‌شوند، و در هر دو حالت **هیچ درخواستی** به جنگو فرستاده نمی‌شود.
+صفحه‌بندی هم ترتیبی است و به محض `next=null` یا ۴۰۴ جنگو متوقف می‌شود، پس
+هیچ‌گاه فراتر از آخرین صفحهٔ واقعی درخواستی ارسال نمی‌گردد. صفحه‌های `?page>1`
+تگ `noindex, follow` می‌گیرند و canonical آن‌ها همان آدرس بدون `page` است.
+
 آزمایش دستی:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://cusin.ir/shop/            # 200
 curl -s -o /dev/null -w "%{http_code}\n" https://cusin.ir/products/nope/   # 404
+curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "https://cusin.ir/shop/?page=1000"  # 308 …?page=5
+curl -s "https://cusin.ir/shop/?page=3" | grep -o '<meta name="robots"[^>]*>'                   # noindex, follow
 curl -s https://cusin.ir/products/<slug>/ | grep -o 'product-jsonld[^<]*'
 curl -A "WhatsApp/2.23" https://cusin.ir/products/<slug>/ | head -30          # همان HTML
 ```

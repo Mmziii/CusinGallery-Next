@@ -1,6 +1,15 @@
+import { permanentRedirect } from "next/navigation";
+
 import ShopView from "../../shop/ShopView";
 import JsonLd from "../../components/JsonLd";
-import { getShopData, listBrands, listCategories, parseShopParams } from "../../lib/catalog-server";
+import {
+  getShopData,
+  listBrands,
+  listCategories,
+  parseShopParams,
+  readShopPage,
+  shopPageHref,
+} from "../../lib/catalog-server";
 import { getSite } from "../../lib/api-server";
 import { shopMetadata } from "../../lib/metadata";
 import { breadcrumbJsonLd } from "../../lib/jsonld";
@@ -31,6 +40,18 @@ export async function generateMetadata({ searchParams }) {
 export default async function ShopPage({ searchParams }) {
   const query = (await searchParams) || {};
   const params = parseShopParams(query);
+
+  // `?page=N` is capped (MAX_SHOP_PAGES) and validated BEFORE any Django call:
+  // deeper or malformed pages 308 to the same listing, so a single request can
+  // never fan out into an unbounded number of upstream calls.
+  const { page, redirect } = readShopPage(params.page);
+  if (redirect !== null) {
+    permanentRedirect(shopPageHref("/shop/", params, { page: redirect === "drop" ? null : redirect }));
+  }
+  // Only a clean 1..MAX integer survives from here on ("007" upstream would
+  // be a different, possibly invalid page parameter for Django).
+  if (params.page !== undefined) params.page = String(page);
+
   const data = await getShopData(params);
 
   // Same trail as the visible breadcrumbs: کازین گالری › فروشگاه › … › category

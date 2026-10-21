@@ -39,6 +39,15 @@ vi.mock("next/navigation", () => ({
   redirect: (url) => {
     throw new Error(`redirect:${url}`);
   },
+  // Next's permanentRedirect throws the same digest the router acts on; the
+  // status code travels in it, so tests can assert a REAL 308.
+  permanentRedirect: (url) => {
+    const error = new Error(`NEXT_REDIRECT:${url}`);
+    error.digest = `NEXT_REDIRECT;replace;${url};308;`;
+    error.redirectUrl = url;
+    error.statusCode = 308;
+    throw error;
+  },
 }));
 vi.mock("next/link", () => ({
   default: ({ href, prefetch, children, ...props }) => <a href={href} {...props}>{children}</a>,
@@ -89,8 +98,18 @@ const categories = [
 
 let server;
 let received;
+// Tracks how many listing requests are open at once: the pager must walk the
+// pages sequentially (or at most 2 at a time), never fire them all at once.
+let inFlight = 0;
+let maxInFlight = 0;
 let brandMode = "ok";
 let failProducts = false;
+// The fake listing is 45 products at 20/page -> 3 real pages, and it reports
+// `next` exactly like DRF does (null past the end). `nextBeyondLast` simulates
+// a listing whose count disagrees with its data: `next` stays set, the page
+// beyond the end then answers 404 -- the walk must stop there, not crash.
+let lastPage = 3;
+let nextBeyondLast = false;
 let previousInternalApiUrl;
 
 function sendJson(res, status, data) {
@@ -116,12 +135,20 @@ function handle(req, res) {
   }
   if (path === "/api/v1/products/") {
     if (failProducts) return sendJson(res, 503, { detail: "down" });
+    const requested = Number(url.searchParams.get("page") || "1");
+    // DRF answers 404 for a page past the end.
+    if (!Number.isFinite(requested) || requested < 1 || requested > lastPage) {
+      return sendJson(res, 404, { detail: "Invalid page." });
+    }
+    const nextParams = new URLSearchParams(url.search);
+    nextParams.set("page", String(requested + 1));
+    const hasNext = nextBeyondLast || requested < lastPage;
     // The listing echoes what it was asked for, so "params arrived unchanged"
     // can be asserted from the request the upstream really received.
     return sendJson(res, 200, {
       // A deep listing, so the pagination links have more than one page.
       count: 45,
-      next: null,
+      next: hasNext ? `http://internal/api/v1/products/?${nextParams}` : null,
       results: [product, secondProduct],
       price_bounds: { min: 1000, max: 5000000 },
       price_range: { min: TOOMAN_PRICE, max: 90000 },
@@ -151,6 +178,11 @@ beforeAll(async () => {
   received = [];
   server = http.createServer((req, res) => {
     received.push({ url: req.url, headers: { ...req.headers } });
+    inFlight += 1;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    res.on("close", () => {
+      inFlight -= 1;
+    });
     handle(req, res);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -169,8 +201,12 @@ beforeEach(() => {
   received.length = 0;
   cacheStore.clear();
   cacheOptions.length = 0;
+  inFlight = 0;
+  maxInFlight = 0;
   brandMode = "ok";
   failProducts = false;
+  lastPage = 3;
+  nextBeyondLast = false;
   headersMock.mockImplementation(async () => new Headers({ host: "shop.example:8080", "x-forwarded-proto": "https" }));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -235,6 +271,87 @@ it("walks ?page=N as the first N pages, exactly like the SPA pager", async () =>
   expect(html).toContain(product.name);
   // Page links keep the query format (/shop/?page=3) and are real anchors.
   expect(html).toContain('href="/shop/?page=3"');
+});
+
+it("caps ?page=N at MAX_SHOP_PAGES: a 308 to page 5, and zero upstream calls", async () => {
+  const error = await ShopPage(shopArgs({ category: "pots", page: "1000" })).catch((thrown) => thrown);
+
+  // A real permanent redirect (308), to the SAME listing, one query param away.
+  expect(error.statusCode).toBe(308);
+  expect(error.digest).toBe("NEXT_REDIRECT;replace;/shop/?category=pots&page=5;308;");
+  // Not a single Django request was made: the cap is enforced before the fan-out.
+  expect(urls()).toEqual([]);
+
+  // The capped page itself is served normally (page 5 -> 5 pages requested at
+  // most; this fake only has 3, so the walk stops when `next` goes null).
+  cacheStore.clear();
+  received.length = 0;
+  maxInFlight = 0;
+  const html = renderToStaticMarkup(await ShopPage(shopArgs({ page: "5" })));
+  expect(urls().filter((url) => url.startsWith("/api/v1/products/?"))).toHaveLength(3);
+  expect(html).toContain(product.name);
+  // Sequential (or at most 2 concurrent) -- never the old Promise.all fan-out.
+  expect(maxInFlight).toBeLessThanOrEqual(2);
+
+  // A page inside the cap asks for exactly that many pages, no more.
+  cacheStore.clear();
+  received.length = 0;
+  await ShopPage(shopArgs({ page: "3" }));
+  const three = urls().filter((url) => url.startsWith("/api/v1/products/?"));
+  expect(three).toHaveLength(3);
+  expect(new Set(three.map((url) => new URL(url, "http://internal").searchParams.get("page")))).toEqual(
+    new Set(["1", "2", "3"])
+  );
+});
+
+it("drops a malformed ?page (abc, 0, -2) with a 308 to the page-less URL", async () => {
+  for (const value of ["abc", "0", "-2", "3.5"]) {
+    received.length = 0;
+    const error = await ShopPage(shopArgs({ category: "pots", page: value })).catch((thrown) => thrown);
+    expect(error.statusCode).toBe(308);
+    expect(error.redirectUrl).toBe("/shop/?category=pots");
+    expect(urls()).toEqual([]);
+  }
+});
+
+it("never asks for a page past the real end and renders what exists", async () => {
+  // Honest pagination: asking for page 5 stops at the real last page (3).
+  await ShopPage(shopArgs({ page: "4" }));
+  const honest = urls().filter((url) => url.startsWith("/api/v1/products/?"));
+  expect(honest.map((url) => new URL(url, "http://internal").searchParams.get("page"))).toEqual(["1", "2", "3"]);
+
+  // A listing that keeps advertising `next` past its own end: the first 404
+  // ends the walk, the products already fetched are still rendered.
+  // Fresh cache: the first render already cached pages 1-3 under the same
+  // paths, and a cached page would short-circuit the walk.
+  cacheStore.clear();
+  received.length = 0;
+  lastPage = 2;
+  nextBeyondLast = true;
+  const html = renderToStaticMarkup(await ShopPage(shopArgs({ page: "4" })));
+  const lied = urls().filter((url) => url.startsWith("/api/v1/products/?"));
+  expect(lied).toHaveLength(3); // pages 1, 2 then the 404 on 3 -- and no page 4
+  expect(html).toContain(product.name);
+  expect(html).not.toContain("empty-state--error");
+});
+
+it("noindexes ?page=N listings and keeps the canonical page-less", async () => {
+  const paged = await shopMetadataFor(shopArgs({ category: "pots", page: "3" }));
+  expect(paged.robots).toEqual({ index: false, follow: true });
+  expect(paged.alternates.canonical).toBe("https://cusin.ir/shop/?category=pots");
+
+  const first = await shopMetadataFor(shopArgs({ category: "pots" }));
+  expect(first.robots).toBeUndefined();
+  expect(first.alternates.canonical).toBe("https://cusin.ir/shop/?category=pots");
+
+  // The brand listing shares the pager, so it shares the rule.
+  const { generateMetadata: brandMetadataFor } = await import("../app/brands/[slug]/page");
+  const brandMeta = await brandMetadataFor({
+    ...slugArgs("mes-karan"),
+    searchParams: Promise.resolve({ page: "2" }),
+  });
+  expect(brandMeta.robots).toEqual({ index: false, follow: true });
+  expect(brandMeta.alternates.canonical).toBe("https://cusin.ir/brands/mes-karan/");
 });
 
 it("server-renders a product page with its price, offers and structured data", async () => {

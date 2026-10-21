@@ -31,16 +31,22 @@ const OG_TYPES = new Set(["website", "article", "book", "profile", "music.album"
  * shop keeps only its category (the shareable, crawlable view), exactly as
  * phase 2 requires; a brand page always points at its own URL.
  */
-function buildMetadata({ title, description, canonicalPath, image, type = "website", settings = {}, content } = {}) {
+function buildMetadata({ title, description, canonicalPath, image, type = "website", page = 1, settings = {}, content } = {}) {
   const url = absolute(canonicalPath);
   const finalTitle = withSuffix(title);
   const finalDescription = description || DEFAULT_DESCRIPTION;
   const ogImage = image || settings.og_image || "/brand/og.png";
+  // ?page=N listings are the SAME products as page 1 (the pager concatenates
+  // them), so they must never be indexed. The canonical already points at the
+  // page-less URL; without this, crawlers would index /shop/?page=2..N as
+  // duplicate content and keep discovering arbitrarily deep links.
+  const paged = Number(page) > 1;
   return {
     metadataBase: new URL(SITE_ORIGIN),
     title: finalTitle,
     description: finalDescription,
     alternates: { canonical: url },
+    ...(paged ? { robots: { index: false, follow: true } } : {}),
     twitter: { card: "summary_large_image" },
     openGraph: {
       title: finalTitle,
@@ -80,18 +86,20 @@ export function shopMetadata({ params = {}, categories = [], brands = [], fixedB
     description,
     canonicalPath: fixedBrand ? `/brands/${encodeURIComponent(fixedBrand.slug)}/` : shopCanonicalPath(selectedCategory?.slug),
     image,
+    page: Number(params.page) || 1,
     settings,
     content,
   });
 }
 
-export function brandMetadata({ brand, products, settings = {}, content = {} } = {}) {
+export function brandMetadata({ brand, page = 1, settings = {}, content = {} } = {}) {
   const name = brand?.name || "";
   return buildMetadata({
     title: `محصولات برند ${faDigits(name)}`,
     description: `خرید محصولات برند ${faDigits(name)} از کازین گالری؛ قیمت به تومان و ارسال به سراسر ایران.`,
     canonicalPath: `/brands/${encodeURIComponent(brand?.slug || "")}/`,
     image: shareImageUrl(brand?.tile_image || brand?.logo),
+    page,
     settings,
     content,
   });
