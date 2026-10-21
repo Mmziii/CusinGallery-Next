@@ -271,29 +271,45 @@ curl https://cusin.ir/robots.txt
 curl https://cusin.ir/sitemap.xml | head
 ```
 
-### پیش‌نمایش لینک در واتس‌اپ/تلگرام/اینستاگرام (متادیتای مخصوص خزنده‌ها)
+### پیش‌نمایش لینک و HTML واقعی صفحه‌های کاتالوگ (فاز ۲)
 
-خزنده‌های شبکه‌های اجتماعی و پیام‌رسان‌ها (واتس‌اپ، تلگرام، اینستاگرام، ایتا،
-توییتر/ایکس، اسلک، لینکدین، دیسکورد و…) جاوااسکریپت اجرا **نمی‌کنند**؛ پس
-متادیتایی که برنامهٔ React در مرورگر می‌نویسد را هرگز نمی‌بینند. به همین دلیل
-پیکربندی nginx (هم `nginx/conf.d/cusin.conf` و هم `nginx/prod.d/cusin.conf`)
-بر اساس User-Agent تشخیص می‌دهد که درخواست از یک خزنده است و برای دو دسته آدرس
-آن را به بک‌اند (Django) می‌فرستد:
+صفحه‌های `/shop/`، `/products/<slug>/` و `/brands/<slug>/` اکنون در اپ Next
+**سمت سرور** رندر می‌شوند؛ یعنی عنوان، توضیح، canonical، تگ‌های
+`og:type/title/description/url/image` و دادهٔ ساخت‌یافتهٔ JSON-LD
+(Product با قیمت به **ریال** = تومان × ۱۰ و `priceCurrency: "IRR"`، و
+BreadcrumbList) داخل همان HTML اولیه هستند. بنابراین دیگر هیچ تفکیک
+خزنده/کاربر لازم نیست و بلوک‌های قدیمی `map $http_user_agent` و بازنویسی به
+`/seo/...` از هر سه فایل nginx حذف شده‌اند. نقطهٔ پایانی `/seo/...` جنگو
+همچنان وجود دارد ولی nginx به آن ارجاع نمی‌دهد.
 
-| آدرس سایت | پاسخ به خزنده |
+| آدرس | مقصد |
 |---|---|
-| `/products/<slug>/` | `/seo/product/<slug>/` |
-| `/shop/?category=<slug>` | `/seo/shop/?category=<slug>` |
+| `/shop/`، `/shop` | کانتینر `web` (Next، رندر سرور) |
+| `/products/<slug>/` | کانتینر `web` |
+| `/brands/<slug>/` | کانتینر `web` |
+| `/_next/`، `/` | کانتینر `web` |
+| `/cart/`، `/checkout/`، `/account/`، `/login/`، صفحه‌های اعتماد | کانتینر `frontend` (SPA) |
+| `/api/`، `/admin/` | بک‌اند (Django) |
+| `/robots.txt`، `/sitemap.xml` | بک‌اند (Django) |
 
-این دو نقطهٔ پایانی یک سند HTML کوچک برمی‌گردانند: عنوان، توضیح، canonical،
-تگ‌های `og:type/title/description/url/image`، کارت توییتر، دادهٔ ساخت‌یافتهٔ
-JSON-LD محصول (قیمت و موجودی) و یک لینک به صفحهٔ واقعی. تصویر با بزرگ‌ترین
-نسخهٔ WebP موجود (۱۲۰۰ ← ۸۰۰ ← ۴۰۰) و در نبود تصویر با
-`/brand/og-placeholder.png` پر می‌شود. محصول یا دستهٔ **غیرفعال/ناموجود** همیشه
-۴۰۴ می‌گیرد تا هیچ‌وقت پیش‌نمایش کالای منتشرنشده بیرون نرود. پاسخ‌ها ۵ دقیقه
-(`Cache-Control: public, max-age=300`) کش می‌شوند.
+اسلاگ ناموجود در Next با `notFound()` پاسخ **۴۰۴ واقعی** می‌گیرد و همان صفحهٔ
+۴۰۴ فارسی نمایش داده می‌شود. (در Next 16 محتوای این صفحه پس از hydration
+رندر می‌شود؛ کد وضعیت از همان درخواست اول ۴۰۴ است و خود Next تگ
+`<meta name="robots" content="noindex">` را اضافه می‌کند.)
 
-بازدیدکنندهٔ عادی هیچ تغییری نمی‌بیند: همان اپلیکیشن React سرو می‌شود.
+آزمایش دستی:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" https://cusin.ir/shop/            # 200
+curl -s -o /dev/null -w "%{http_code}\n" https://cusin.ir/products/nope/   # 404
+curl -s https://cusin.ir/products/<slug>/ | grep -o 'product-jsonld[^<]*'
+curl -A "WhatsApp/2.23" https://cusin.ir/products/<slug>/ | head -30          # همان HTML
+```
+
+نکتهٔ استقرار: این مسیرها با `proxy_pass http://web:3000` و
+`Host $http_host` تعریف شده‌اند (Next دامنهٔ عمومی را از همین هدر می‌گیرد).
+پس از تغییر، `docker compose -f docker-compose.prod.yml restart nginx` و
+`docker compose -f docker-compose.prod.yml up -d web` را اجرا کنید.
 
 ### وضعیت واقعی ۴۰۴ (Audit 19 — مورد ۵)
 
@@ -305,8 +321,7 @@ JSON-LD محصول (قیمت و موجودی) و یک لینک به صفحهٔ �
 | آدرس | پاسخ |
 |---|---|
 | مسیرهای شناخته‌شدهٔ SPA (خانه، فروشگاه، سبد، پرداخت، حساب، صفحه‌های اعتماد) | `index.html` با کد ۲۰۰ |
-| `/products/<slug>/` با اسلاگ **موجود و فعال** | `index.html` با کد ۲۰۰ |
-| `/shop/?category=<slug>` با دستهٔ موجود | `index.html` با کد ۲۰۰ |
+| `/products/<slug>/` و `/brands/<slug>/` و `/shop/` | کانتینر `web` (Next)؛ اسلاگ ناموجود → ۴۰۴ واقعی |
 | هر چیز دیگر | همان صفحهٔ ۴۰۴ فارسی، کد **۴۰۴** + `<meta name="robots" content="noindex">` و هدر `X-Robots-Tag` |
 
 فایل‌های استاتیک ساخته‌شده (`/assets/`, `/fonts/`, `/brand/`, favicon) همچنان

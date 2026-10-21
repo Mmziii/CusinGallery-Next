@@ -14,3 +14,13 @@
     display: none;
   }
 }
+
+/* Product content sections: the phone gets native accordions, the desktop a
+   plain heading + body. Both are server-rendered; CSS decides, so no markup
+   ever depends on the viewport width measured in JavaScript. */
+.product-detail__section--collapsible { display: none; }
+
+@media (max-width: 767px) {
+  .product-detail__section--static { display: none; }
+  .product-detail__section--collapsible { display: block; }
+}

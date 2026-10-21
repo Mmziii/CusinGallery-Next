@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../utils/nextRoutes";
 
 import Icon from "./Icon";
 import { SOCIAL_CHANNELS } from "../content/defaults";

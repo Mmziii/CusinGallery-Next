@@ -33,6 +33,19 @@ function LocationProbe() {
   return <output data-testid="location">{`${pathname}${search}${hash}`}</output>;
 }
 
+// A document link lets jsdom attempt a real navigation, which it cannot do.
+// Blocking the default action keeps these tests quiet while still letting
+// React's own click handlers (surface cleanup) run: the capture listener is
+// attached at the document, before React's delegated root listener.
+function blockDocumentNavigation() {
+  const handler = (event) => {
+    const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
+    if (target) event.preventDefault();
+  };
+  document.addEventListener("click", handler, true);
+  return () => document.removeEventListener("click", handler, true);
+}
+
 function renderHeader(route = "/") {
   return render(
     <MemoryRouter initialEntries={[route]}>
@@ -75,18 +88,27 @@ afterEach(() => {
 });
 
 describe("home brand navigation", () => {
+  // Phase 2: the home page belongs to the Next app. The logo must therefore
+  // leave the SPA (a plain <a href="/">), never render the retired SPA home
+  // through a react-router transition.
   it.each([
     ["404", "/missing-page/?from=header#lost"],
     ["checkout", "/checkout/?step=delivery#address"],
     ["payment result", "/payment/result/51/?state=ok#receipt"],
     ["account", "/account/orders/?page=2#history"],
-  ])("goes home and removes query/hash from %s", async (_kind, route) => {
+  ])("leaves for the Next home and removes query/hash from %s", async (_kind, route) => {
     const view = renderHeader(route);
     const brand = view.container.querySelector(".site-header__inner > .site-header__brand");
+    const release = blockDocumentNavigation();
 
+    expect(brand.tagName).toBe("A");
+    expect(brand.getAttribute("href")).toBe("/");
+    const before = screen.getByTestId("location").textContent;
     fireEvent.click(brand);
 
-    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/"));
+    // No react-router transition: the document navigation is the browser's.
+    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe(before));
+    release();
   });
 
   it("closes every header surface and clears a pending search from the drawer home link", async () => {
@@ -116,16 +138,19 @@ describe("home brand navigation", () => {
     drawerHome.focus();
     expect(document.activeElement).toBe(drawerHome);
 
+    expect(drawerHome.tagName).toBe("A");
+    expect(drawerHome.getAttribute("href")).toBe("/");
+    const release = blockDocumentNavigation();
     fireEvent.click(drawerHome);
 
     await waitFor(() => {
-      expect(screen.getByTestId("location").textContent).toBe("/");
       expect(document.body.querySelector(".site-header__drawer")).toBeNull();
       expect(document.body.querySelector(".minicart")).toBeNull();
       expect(view.container.querySelector(".mega-menu")).toBeNull();
       expect(view.container.querySelector(".search-suggest")).toBeNull();
       expect(search.value).toBe("");
     });
+    release();
   });
 
   it.each([
@@ -156,8 +181,11 @@ describe("home brand navigation", () => {
     );
 
     expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
-    fireEvent.click(screen.getByRole("link", { name: "کازین گالری — صفحه اصلی" }));
-    expect(await screen.findByRole("heading", { name: "خانه بازیابی‌شده" })).toBeTruthy();
+    // The recovery control survives the crash and leads to the Next home with
+    // a real document navigation (the SPA cannot render that route itself).
+    const logo = screen.getByRole("link", { name: "کازین گالری — صفحه اصلی" });
+    expect(logo.getAttribute("href")).toBe("/");
+    expect(logo.closest("a")).toBe(logo);
     spy.mockRestore();
   });
 });

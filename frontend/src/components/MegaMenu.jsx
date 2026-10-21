@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
+import { Link } from "../utils/nextRoutes";
 
 import Icon from "./Icon";
 import Portal from "./Portal";

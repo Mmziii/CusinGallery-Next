@@ -2,7 +2,9 @@ import { faDigits } from "../utils/faDigits";
 import useWishlistStore from "../store/useWishlistStore";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+
+import { Link, NavLink, useNextNavigate } from "../utils/nextRoutes";
 
 import Icon from "./Icon";
 import MegaMenu from "./MegaMenu";
@@ -55,7 +57,7 @@ function Header() {
   const location = useLocation();
   const currentRoute = `${location.pathname}${location.search}${location.hash}`;
   const previousRoute = useRef(currentRoute);
-  const navigate = useNavigate();
+  const navigate = useNextNavigate();
   const { user, isAuthenticated, isLoading, logout, fetchMe } = useAuthStore();
   useEffect(() => { if (isAuthenticated) refreshWishlist(); else resetWishlist(); }, [isAuthenticated, refreshWishlist, resetWishlist]);
   const cart = useCartStore((s) => s.cart);

@@ -11,7 +11,12 @@ import { getRecentlyViewed, RECENT_LIMIT } from "../utils/recentlyViewed";
 
 /** One shared scroll-snap row for the product, home and cart pages. */
 function RecentlyViewed({ limit = RECENT_LIMIT, excludeId = null }) {
-  const ids = useMemo(() => getRecentlyViewed(excludeId).slice(0, Math.min(limit, RECENT_LIMIT)), [limit, excludeId]);
+  // Browser-local ids are read AFTER hydration: reading them during the first
+  // render would produce markup the server (which has no storage) never sent.
+  const [ids, setIds] = useState([]);
+  useEffect(() => {
+    setIds(getRecentlyViewed(excludeId).slice(0, Math.min(limit, RECENT_LIMIT)));
+  }, [limit, excludeId]);
   const trackRef = useRef(null);
   const trackId = useId();
   const [scrollable, setScrollable] = useState({ previous: false, next: false });

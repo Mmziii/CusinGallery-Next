@@ -66,7 +66,11 @@ function djangoRequest(path, { host, proto, forwardedFor, cookie }) {
           const status = res.statusCode || 0;
           if (status < 200 || status >= 300) {
             // Body is discarded on purpose: it is neither parsed nor logged.
-            fail(new Error(`Django ${path}: ${status}`), status);
+            // The status rides along on the error so callers can turn a 404
+            // into a real not-found page without parsing the message.
+            const error = new Error(`Django ${path}: ${status}`);
+            error.status = status;
+            fail(error, status);
             return;
           }
           settled = true;
@@ -94,7 +98,12 @@ function djangoRequest(path, { host, proto, forwardedFor, cookie }) {
 }
 
 // Public calls never forward cookies. Opt-in private calls are never cached.
-export async function apiServer(path, { privateData = false } = {}) {
+// `noCache` is the other uncached mode: a PUBLIC (cookie-free) call that must
+// be re-read on every render. Owner-edited content -- banners, and above all
+// the daily deals, whose prices and countdown depend on `server_now` -- cannot
+// live behind the 60s window: the live shop showed one deal while the API
+// already had four, and the countdown started from a stale server clock.
+export async function apiServer(path, { privateData = false, noCache = false } = {}) {
   if (typeof path !== "string" || !path.startsWith("/api/v1/") || path.startsWith("//")) {
     throw new Error("Expected a relative Django API path");
   }
@@ -104,6 +113,9 @@ export async function apiServer(path, { privateData = false } = {}) {
   const forwardedFor = incoming.get("x-forwarded-for") || undefined;
   if (privateData) {
     return djangoRequest(path, { host, proto, forwardedFor, cookie: incoming.get("cookie") || undefined });
+  }
+  if (noCache) {
+    return djangoRequest(path, { host, proto, forwardedFor });
   }
   // Public data is cached for 60s keyed by (path + public host) only: Django
   // builds absolute URLs from the forwarded host, so different public hosts
@@ -119,8 +131,8 @@ export async function apiServer(path, { privateData = false } = {}) {
   return load();
 }
 
-export async function allPages(path) {
-  const first = await apiServer(path);
+export async function allPages(path, options = {}) {
+  const first = await apiServer(path, options);
   if (Array.isArray(first)) return { results: first };
   const results = [...(first.results || [])];
   let next = first.next;
@@ -130,7 +142,7 @@ export async function allPages(path) {
     const relative = url.pathname + url.search;
     if (seen.has(relative)) throw new Error("Pagination loop");
     seen.add(relative);
-    const page = await apiServer(relative);
+    const page = await apiServer(relative, options);
     results.push(...(page.results || []));
     next = page.next;
   }
@@ -146,10 +158,13 @@ export const getSite = cache(async () => {
 });
 
 export async function getHomeData() {
+  // Banners and daily deals are owner-edited, minute-to-minute content: they
+  // are read fresh on every render (still cookie-free). Everything else keeps
+  // the 60s public cache.
   const [banners, categories, deals, brands, featured, fresh, best_sellers, reviewProducts] = await Promise.all([
-    allPages("/api/v1/banners/").catch(() => ({ results: [] })),
+    allPages("/api/v1/banners/", { noCache: true }).catch(() => ({ results: [] })),
     allPages("/api/v1/categories/tree/").catch(() => ({ results: [] })),
-    allPages("/api/v1/banners/daily-deals/").catch(() => ({ results: [] })),
+    allPages("/api/v1/banners/daily-deals/", { noCache: true }).catch(() => ({ results: [] })),
     allPages("/api/v1/brands/?is_featured=true").catch(() => ({ results: [] })),
     apiServer("/api/v1/products/?is_featured=true").catch(() => ({ results: [], failed: true })),
     apiServer("/api/v1/products/?is_new=true").catch(() => ({ results: [], failed: true })),

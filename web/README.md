@@ -1,28 +1,40 @@
-# Phase 1: Next home page
+# Phases 1–2: Next home + server-rendered catalog
 
-JavaScript App Router, Next 16.4.2 (npm stable at implementation), standalone output. All dependencies/assets are local to `web/`; there are no imports from `frontend/`. The existing applications are unmodified.
+JavaScript App Router, Next 16.4.2, standalone output. All dependencies/assets are local to `web/`; there are no imports from `frontend/`. The SPA and the Django backend keep working unchanged; the migration is page by page.
+
+## What is server-rendered now
+
+| Route | Source of truth in this repo |
+|---|---|
+| `/` | `app/page.js` + `home/Home.jsx` (phase 1) |
+| `/shop/` (with `?category=`, `?brand=`, `?search=`, `?min_price=`, `?max_price=`, `?in_stock=`, `?on_sale=`, `?ordering=`, `?page=`, `?attr_<slug>=`) | `app/shop/page.js` + `shop/ShopView.jsx` |
+| `/products/<slug>/` | `app/products/[slug]/page.js` + `product/ProductDetail.jsx` |
+| `/brands/<slug>/` | `app/brands/[slug]/page.js` (same listing view, brand-scoped) |
+
+Everything else (cart, checkout, account, auth, wishlist, info pages) is still the Vite SPA in `frontend/`.
 
 ## Files and boundaries
 
-- `app/layout.js`: request-rendered Persian RTL document, inline owner theme from `/site/content/`, settings from `/site/settings/`, font preload and the original CSS import order.
-- `app/page.js`, `home/Home.jsx`: server fetching/composition and original home markup.
-- `home/HomeInteractive.jsx`: copied slider, countdown, coverflow/phone deals, reveal sections, product rows and reviews, receiving public server data.
-- `components/`, `layouts/`, `hooks/`, `store/`, `services/`, `utils/`, `content/`: copied dependency tree, with Next routing and SSR adaptations. Header/footer/contact/toasts/analytics remain client components. CSRF initialization is retained.
-- `lib/api-server.js`: internal Django requests, public Host/protocol forwarding, 60-second public fetch revalidation, pagination, explicit no-store private requests. Public requests never carry cookies. API failures preserve default site content and product-row retry UI.
-- `lib/navigation.jsx`: Next links/router for home; ordinary anchors/document navigation for every not-yet-migrated page. NavLink active classes use `usePathname`.
-- `lib/site-context.jsx`: server-provided settings/content for shared client components, avoiding a default-theme hydration flash.
-- `lib/metadata.js`: home metadata and canonical origin.
-- `styles/`, `public/fonts/`, `public/brand/`: unchanged copies. CSS, fonts and Zustand stores were checked byte-for-byte against the originals. Axios logic is unchanged except replacing the Vite environment expression with the relative `/api/v1` base URL.
-- `Dockerfile`, `.dockerignore`, `next.config.mjs`, package/lock/config files: Node 22 Alpine multistage standalone build, non-root runtime on port 3000.
-- `tests/phase1.test.jsx`: focused Node-only rendering/data tests; no browser.
+- `app/layout.js`: request-rendered Persian RTL document, inline owner theme, font preload and the original CSS import order.
+- `app/page.js`, `home/`: home server fetching/composition and the original home markup.
+- `app/shop/page.js`, `app/products/[slug]/page.js`, `app/brands/[slug]/page.js`: catalog server components — query parsing, Django reads, metadata, JSON-LD, `notFound()`.
+- `shop/ShopView.jsx`: the SPA `ShopPage` markup and behaviour as a client island (filter panel, phone sheets, sticky bar, sorting, paging) fed by server data.
+- `product/ProductDetail.jsx`, `product/ReviewsSection.jsx`: product page; reviews summary + first page arrive server-rendered, the form/pagination stay client-side.
+- `components/`: phase-1 copies plus `Breadcrumbs`, `CategoryFilterTree`, `BrandFilter`, `PriceRangeFilter`, `ProductGallery`, `ProductLightbox`, `JsonLd`, `NotFoundPage`.
+- `lib/api-server.js`: internal Django requests over `node:http` (never `fetch`: undici drops the Host header and Django answers `DisallowedHost`), public Host/protocol forwarding, 60-second public cache for catalog data, `privateData` (cookie, uncached) and `noCache` (public, uncached) modes. Errors carry `status` so a 404 becomes a real not-found page.
+- `lib/catalog-server.js`: shop/product/brand reads, the shop's parameter whitelist (`attr_*` facets included), the `?page=N` = first N pages pager and facet scoping.
+- `lib/jsonld.js`, `lib/metadata.js`, `lib/site.js`: structured data (Product with IRR prices, BreadcrumbList, WebSite, Organization), titles/descriptions/canonical/OpenGraph, canonical origin.
+- `lib/navigation.jsx`: Next links/router for pages this app renders; ordinary anchors/document navigation for every route the SPA still owns.
+- `styles/`: unchanged copies plus the additive `responsive-variants.css`, which is the ONLY place viewport width selects between the two server-rendered variants.
+- `tests/phase1.test.jsx`, `tests/phase2.test.jsx`, `tests/api-server.test.jsx`: Node-only tests against a real throwaway `node:http` Django stand-in.
 
 ## Routing and deployment
 
-Both Compose files now include `web`. Nginx's actual storefront server and the production HTTP bootstrap example route **exactly `/`** and **`/_next/`** to `web:3000`. The production HTTP-to-HTTPS redirect is unchanged. All other locations, Django page-status validation, API/admin/payments, SPA assets, fonts, brand assets and media retain their old routing. Shared public assets are also copied into `web/public` for future migration, but their current Nginx routing is deliberately unchanged.
+Nginx (all three configs: `nginx/conf.d/cusin.conf`, `nginx/prod.d/cusin.conf`, `nginx/prod.d/00-bootstrap-http.conf.example`) sends `/shop/`, `/products/<slug>/`, `/brands/<slug>/`, `/` and `/_next/` to `web:3000` with `Host $http_host` and the `X-Forwarded-*` chain; `/robots.txt` and `/sitemap.xml` stay on Django and every other page stays on the SPA container. The old User-Agent `map` and the `/seo/...` rewrites are gone: Next serves real HTML to bots and humans alike.
 
-`HTTP_PORT` defaults to 80; `HTTPS_PORT` defaults to 443. Development's HTTPS mapping stays commented until TLS is configured, as before. Set these in the Compose environment to avoid host port collisions. This does not by itself configure certificates, domains, or redirect ports for a second deployment.
+`next.config.mjs` sets `trailingSlash: true`, so `/shop/`, `/products/<slug>/` and `/brands/<slug>/` keep the exact URL shape the storefront always had (old links, the Django sitemap and the canonicals stay valid); `/shop` 308-redirects to `/shop/`.
 
-Runtime: `INTERNAL_API_URL=http://backend:8000`; `SITE_ORIGIN` is wired from the existing `VITE_SITE_ORIGIN` Compose variable (default `https://cusin.ir`). Django must allow the public Host. Analytics/error-reporting flags are wired as build arguments using `NEXT_PUBLIC_*` names. No internal backend address is sent to browser API calls.
+Runtime: `INTERNAL_API_URL=http://backend:8000`; `SITE_ORIGIN` (or `NEXT_PUBLIC_SITE_ORIGIN`) is the canonical origin, default `https://cusin.ir`. Django must allow the public Host.
 
 ```sh
 cd web
@@ -31,24 +43,23 @@ npm test
 npm run build
 ```
 
-Use Compose/Nginx for integrated local testing: a bare Next server does not proxy SPA pages or `/api`. No extra Next routes or catch-all proxy have been introduced.
-
 ## Parity notes / deliberate differences
 
-- Original markup/classes, hero interactions, deals controls, countdown, reviews, brand tiles and add-to-cart logic are retained. Public data now arrives in server HTML instead of loading skeletons.
-- The existing `SiteSettingsSerializer` has contact fields only: it exposes no home SEO title/description/OG fields. Until the backend gains those fields, metadata preserves `frontend/index.html` defaults (including its distinct document/OG descriptions and `/brand/og.png`), with owner brand name from site content and configurable canonical origin. Optional future SEO settings fields are supported; none were invented in Django.
-- Recently viewed depends on browser localStorage, so it still loads after hydration. Private account/cart data also remains client-side and is never placed in public cache entries.
-- Both phone and desktop deals/product-card variants are in the server HTML. The additive `styles/responsive-variants.css` selects them at 767px/768px using `display: none`, which also removes hidden controls from keyboard navigation and the accessibility tree. The four copied stylesheets remain unchanged. Media queries only control behaviour (desktop autoplay, visible countdown timers, toast wording); they never select variant markup. Desktop autoplay and rotation timers stop on phones, and hidden countdowns do not run interval timers. One shared expiry clock still removes expired deals from both variants. No browser-based pixel comparison was performed.
-- A product-row API error retains the error markup, but its retry reloads the document to rerun server fetching rather than making the old in-component Axios request.
-- Full document navigation to SPA pages is intentional during phase 1, so both applications keep their respective routers. SPA-to-home client-side navigation remains owned by the unchanged SPA until a full home request.
+- Markup, class names and structure are the SPA's (`ShopPage.jsx`, `ProductDetailPage.jsx`, `BrandPage.jsx` and their components), now rendered from server data. A failed catalog API still renders the same error markup with a retry control (it re-runs the server render instead of an Axios request).
+- Responsive markup: nothing is chosen by `useMediaQuery`/window width except toast wording. The filter sidebar and the phone toolbar, the product `<section>`s and phone `<details>` accordions, and both product-card variants are all in the HTML; `styles/responsive-variants.css` + the existing breakpoints pick one with `display: none`, which also removes the hidden copy from the tab order.
+- **Complements are intentionally not rendered**, matching the SPA: `ProductDetailPage.complements.test.jsx` asserts that the API's `complements` rows never appear, so the Next page renders `related_products` only.
+- Prices: the page shows whole Toman (as before); the JSON-LD `Offer` publishes Rial (`Toman × 10`) with `priceCurrency: "IRR"`, per phase 2.
+- `og:type` is `website` on product pages. Next validates the OpenGraph type against its own enum and `product` is not part of it (it throws and the whole metadata object is dropped); the product signal lives in the JSON-LD `Product` instead.
+- Unknown product/brand slugs call `notFound()`: the response status is a real 404 and Next emits `<meta name="robots" content="noindex">`. In Next 16 the Persian 404 body is delivered in the RSC payload and hydrated on the client rather than in the initial HTML (unmatched URLs, e.g. `/some-unknown-path/`, are server-rendered in full).
+- Dates (`faDate`) are pinned to `Asia/Tehran`: review dates are now server-rendered, and an unpinned timezone made the container's UTC calendar disagree with the browser's after midnight (a hydration mismatch).
+- Recently viewed reads `localStorage` after hydration (not during the first render), so the server and the first client render agree.
+- Daily deals and banners are read on **every** render (public, cookie-free, uncached): an owner edit appears immediately and the countdown's `server_now` base is never stale. Products, categories, brands and settings keep the 60-second public cache.
+- Full document navigation between the two apps is intentional: `frontend/src/utils/nextRoutes.jsx` is the SPA's single switchboard, so links to `/`, `/shop/…`, `/products/…`, `/brands/…` leave the SPA instead of rendering its retired copies.
 
 ## Verification
 
-- `npm run build`: passed; `/` is dynamically server-rendered, standalone output generated.
-- `npm test`: 9 tests passed: server HTML products/prices/deals, theme inline on html, active navigation, Host/cache/private-cookie handling, pagination, metadata, failed API fallback, absolute API destination rejection, both responsive variants present in server HTML.
-- `npm audit`: zero vulnerabilities.
-- `git diff --check`: passed.
-- CSS/fonts/stores: byte-identical comparison passed.
-- No lint configuration added. No Playwright, real browser, or backend suite run. Docker is unavailable in this workspace, so image builds and live Nginx/Compose validation remain deployment checks.
-
-`.npmrc` enables legacy peer resolution because the unchanged Zustand 4 dependency advertises React <=18 peers, while the latest Next uses React 19. The build and focused rendering tests pass; full interactive browser validation remains outstanding.
+- `npm run build`: passed; `/`, `/shop`, `/products/[slug]`, `/brands/[slug]` are dynamic (server-rendered on demand).
+- `npm test`: 24 tests passed — shop HTML from query params, unchanged filter forwarding, `?page=N` paging, product HTML + IRR JSON-LD, real 404s (product and brand), canonicals, the uncached-deals/60s-products split, and the failed-API fallback.
+- Live smoke test (`next start` + a fake Django + `curl`): `/shop/` 200, `/products/copper-pot/` 200, `/brands/mes-karan/` 200, `/products/unknown-product/` 404, `/brands/nope/` 404, `/shop` 308 → `/shop/`, title/canonical/OpenGraph/JSON-LD present in the HTML.
+- `frontend`: `npm test` 697 tests passed (includes the new `nextRoutes` helper suite); two SPA tests that asserted in-app navigation to `/` were updated to assert the document-link contract.
+- No lint configuration added. No Playwright, real browser, backend suite or Docker run in this workspace, so live Nginx/Compose validation remains a deployment check.

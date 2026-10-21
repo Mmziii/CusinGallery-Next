@@ -12,15 +12,20 @@ export function latinDigits(value) {
     return String(code >= 0x06f0 && code <= 0x06f9 ? code - 0x06f0 : code - 0x0660);
   });
 }
+// Dates are now part of the SERVER-rendered HTML (product reviews). Without a
+// pinned timezone the container's clock (UTC) and the visitor's browser
+// (Tehran, +03:30) disagree after midnight -- a hydration mismatch on the
+// review date. The shop is Iranian, so the storefront's calendar is Tehran.
+const SHOP_TIME_ZONE = "Asia/Tehran";
 export function faDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("fa-IR", { year: "numeric", month: "2-digit", day: "2-digit" });
+  return date.toLocaleDateString("fa-IR", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: SHOP_TIME_ZONE });
 }
 export function faDateTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return `${faDate(date)}، ساعت ${date.toLocaleTimeString("fa-IR", { hour: "numeric", minute: "2-digit" })}`;
+  return `${faDate(date)}، ساعت ${date.toLocaleTimeString("fa-IR", { hour: "numeric", minute: "2-digit", timeZone: SHOP_TIME_ZONE })}`;
 }
 /**
  * Owner-entered opening / pickup hours.
