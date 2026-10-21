@@ -1,0 +1,272 @@
+import { create } from "zustand";
+
+import * as cartApi from "../services/cartApi";
+import * as catalogApi from "../services/catalogApi";
+import { normalizeApiError } from "../utils/apiError";
+import { trackEvent } from "../utils/behaviour";
+import {
+  clearGuestLines,
+  getMergeToken,
+  guestLineCount,
+  loadGuestLines,
+  rotateMergeToken,
+  saveGuestLines,
+} from "../utils/guestCart";
+
+/**
+ * Cart state store.
+ *
+ * Authenticated users: the backend stays authoritative -- every action
+ * calls the API and stores the FRESH server response; this store never
+ * computes prices.
+ *
+ * Guests (Part 1): lines live in localStorage as {product_id,
+ * variant_id, quantity} ONLY. Names/prices for display are hydrated
+ * from the products API (hydrateGuestProducts) and never persisted.
+ * On login/register the guest lines are merged server-side through
+ * POST /cart/merge/ (idempotent per merge_token); the local cart is
+ * cleared ONLY after a successful merge, so a failed network call can
+ * never lose it.
+ *
+ * `cart` always holds a badge-compatible view: the server payload for
+ * logged-in users, or a synthesized {items, item_count} for guests.
+ */
+// Part S1 item 2: hydration requests are sequenced so a stale response
+// (slow network, fast repeated cart changes, navigation) can never
+// overwrite the result of a newer request.
+let hydrationSeq = 0;
+
+/**
+ * Part S2 item 6: optimistic view for a quantity change. Recomputes ONLY
+ * display numbers that follow mechanically from existing server values
+ * (line_total = price x qty, subtotal, item_count); the next server
+ * response replaces the whole object anyway, so nothing here can drift
+ * from the backend's own arithmetic.
+ */
+function withOptimisticQty(cart, itemId, quantity) {
+  let items = cart.items.map((item) =>
+    item.id === itemId ? { ...item, quantity, line_total: item.price_info.price * quantity } : item
+  );
+  if (quantity <= 0) items = items.filter((item) => item.id !== itemId);
+  const subtotal = items.reduce((sum, item) => sum + item.line_total, 0);
+  return { ...cart, items, subtotal, item_count: items.reduce((sum, item) => sum + item.quantity, 0) };
+}
+
+function withoutItem(cart, itemId) {
+  const items = cart.items.filter((item) => item.id !== itemId);
+  const subtotal = items.reduce((sum, item) => sum + item.line_total, 0);
+  return { ...cart, items, subtotal, item_count: items.reduce((sum, item) => sum + item.quantity, 0) };
+}
+
+const useCartStore = create((set, get) => ({
+  cart: null,
+  guestLines: loadGuestLines(),
+  guestProducts: {}, // product_id -> product payload (display-only)
+  // Part S5 follow-up 4 item 3: variant_id -> variant payload. The products
+  // LIST endpoint is deliberately variant-free, so a guest line that
+  // points at a variant needs the product DETAIL to know its own price.
+  guestVariants: {},
+  // Part S1 item 2: explicit hydration lifecycle so the cart page never
+  // shows half-rendered rows with a fake 0 total: "idle" before the
+  // first attempt, "loading" in flight, "ready" once hydrated, "error"
+  // when the products request failed (retry via hydrateGuestProducts()).
+  guestHydration: "idle",
+  guestHydrationError: null,
+  lastMergeReport: null,
+  isLoading: false,
+  error: null,
+
+  _guestCartView(lines) {
+    return { items: lines, item_count: guestLineCount(lines), guest: true };
+  },
+
+  _syncGuest() {
+    const lines = get().guestLines;
+    saveGuestLines(lines);
+    set({ cart: get()._guestCartView(lines) });
+  },
+
+  // ------------------------------------------------ guest actions
+  addGuestItem(productId, variantId, quantity) {
+    const lines = [...get().guestLines];
+    const existing = lines.find(
+      (l) => l.product_id === productId && (l.variant_id ?? null) === (variantId ?? null)
+    );
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      lines.push({ product_id: productId, variant_id: variantId ?? null, quantity });
+    }
+    set({ guestLines: lines });
+    get()._syncGuest();
+    // Guests have no server cart, so their add is reported here. An
+    // authenticated add is recorded by Django itself (cart API), which
+    // keeps that event even if this tab is closed mid-request.
+    trackEvent("add_to_cart", { product_id: productId });
+    return { success: true };
+  },
+
+  updateGuestItem(productId, variantId, quantity) {
+    let lines = [...get().guestLines];
+    if (quantity <= 0) {
+      lines = lines.filter(
+        (l) => !(l.product_id === productId && (l.variant_id ?? null) === (variantId ?? null))
+      );
+    } else {
+      const existing = lines.find(
+        (l) => l.product_id === productId && (l.variant_id ?? null) === (variantId ?? null)
+      );
+      if (existing) existing.quantity = quantity;
+    }
+    set({ guestLines: lines });
+    get()._syncGuest();
+    if (quantity <= 0) trackEvent("remove_from_cart", { product_id: productId });
+    return { success: true };
+  },
+
+  async hydrateGuestProducts() {
+    const lines = get().guestLines;
+    const ids = [...new Set(lines.map((l) => l.product_id))];
+    if (ids.length === 0) {
+      set({ guestProducts: {}, guestVariants: {}, guestHydration: "ready", guestHydrationError: null });
+      return;
+    }
+    const seq = ++hydrationSeq;
+    set({ guestHydration: "loading", guestHydrationError: null });
+    try {
+      // The server caps page_size at 100. Follow `next` rather than
+      // assuming one response can contain every browser-local cart line.
+      const data = await catalogApi.listAllProducts({ ids: ids.join(","), page_size: ids.length });
+      if (seq !== hydrationSeq) return; // a newer request owns the result
+      const byId = {};
+      for (const product of data.results || []) byId[product.id] = product;
+
+      // Variant lines need each product's DETAIL (the list endpoint has no
+      // variants): fetch exactly those products once, cache variant_id ->
+      // variant, and let a failure surface through the same friendly
+      // error + retry path as the list request.
+      const variantProductIds = [...new Set(lines.filter((l) => l.variant_id).map((l) => l.product_id))];
+      const slugs = variantProductIds.map((productId) => byId[productId]?.slug).filter(Boolean);
+      const details = await Promise.all(slugs.map((slug) => catalogApi.getProduct(slug)));
+      if (seq !== hydrationSeq) return; // a newer request owns the result
+      const variants = {};
+      for (const detail of details) {
+        for (const variant of detail?.variants || []) variants[variant.id] = variant;
+      }
+      set({
+        guestProducts: byId, guestVariants: variants,
+        guestHydration: "ready", guestHydrationError: null,
+      });
+    } catch (err) {
+      if (seq !== hydrationSeq) return; // a newer request owns the state
+      // Never swallow: the cart page shows a friendly error + retry, and
+      // already-hydrated rows keep their data (guestProducts untouched).
+      set({ guestHydration: "error", guestHydrationError: normalizeApiError(err) });
+    }
+  },
+
+  async mergeGuestCart() {
+    const lines = get().guestLines;
+    if (lines.length === 0) return null;
+    try {
+      const response = await cartApi.mergeGuestCart(lines, getMergeToken());
+      // Success is the ONLY path that clears the guest cart: a lost or
+      // failed response leaves the lines intact for the next attempt.
+      clearGuestLines();
+      rotateMergeToken();
+      set({
+        guestLines: [],
+        cart: response.cart,
+        lastMergeReport: response.report,
+        error: null,
+      });
+      return response.report;
+    } catch (err) {
+      // Keep the local cart; surface nothing destructive.
+      set({ lastMergeReport: null });
+      return { error: normalizeApiError(err) };
+    }
+  },
+
+  clearMergeNotice() {
+    set({ lastMergeReport: null });
+  },
+
+  // ------------------------------------------------ server actions
+  async fetchCart() {
+    set({ isLoading: true, error: null });
+    try {
+      const cart = await cartApi.fetchCart();
+      set({ cart, isLoading: false });
+    } catch (err) {
+      set({ isLoading: false, error: normalizeApiError(err) });
+    }
+  },
+
+  async addItem(productId, variantId, quantity) {
+    const { isAuthenticated } = (await import("./useAuthStore")).default.getState();
+    if (!isAuthenticated) return get().addGuestItem(productId, variantId, quantity);
+    set({ isLoading: true, error: null });
+    try {
+      const cart = await cartApi.addCartItem(productId, variantId, quantity);
+      set({ cart, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const normalized = normalizeApiError(err);
+      set({ isLoading: false, error: normalized });
+      return { success: false, error: normalized };
+    }
+  },
+
+  async updateItem(itemId, quantity, guestKey = null) {
+    if (guestKey) {
+      return get().updateGuestItem(guestKey.product_id, guestKey.variant_id, quantity);
+    }
+    // Part S2 item 6: optimistic quantity update -- the UI reacts
+    // instantly; on failure the pre-change snapshot is rolled back.
+    const snapshot = get().cart;
+    if (snapshot) set({ cart: withOptimisticQty(snapshot, itemId, quantity) });
+    set({ error: null });
+    try {
+      const cart = await cartApi.updateCartItem(itemId, quantity);
+      set({ cart, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const normalized = normalizeApiError(err);
+      set({ cart: snapshot, isLoading: false, error: normalized });
+      return { success: false, error: normalized };
+    }
+  },
+
+  async removeItem(itemId, guestKey = null) {
+    if (guestKey) {
+      return get().updateGuestItem(guestKey.product_id, guestKey.variant_id, 0);
+    }
+    // Part S2 item 6: optimistic removal with rollback on failure.
+    const snapshot = get().cart;
+    if (snapshot) set({ cart: withoutItem(snapshot, itemId) });
+    set({ error: null });
+    try {
+      const cart = await cartApi.removeCartItem(itemId);
+      set({ cart, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const normalized = normalizeApiError(err);
+      set({ cart: snapshot, isLoading: false, error: normalized });
+      return { success: false, error: normalized };
+    }
+  },
+
+  /**
+   * Called on logout: drop the SERVER cart view but keep the
+   * browser-level guest lines (they belong to the device, not to any
+   * user, and can never contain another user's server cart).
+   */
+  reset() {
+    set({ cart: null, error: null, guestProducts: {}, guestVariants: {} });
+    const lines = get().guestLines;
+    if (lines.length > 0) set({ cart: get()._guestCartView(lines) });
+  },
+}));
+
+export default useCartStore;

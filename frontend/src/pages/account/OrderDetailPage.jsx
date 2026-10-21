@@ -1,0 +1,172 @@
+import { formatAddress } from "../../utils/formatAddress";
+import { faDigits, faDateTime, deliveryRange } from "../../utils/faDigits";
+import { ContentSkeleton } from "../../components/Skeletons";
+import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
+
+import SmartImage from "../../components/SmartImage";
+import { Alert, ErrorState, errorMessage } from "../../components/ui";
+import { useAsync } from "../../hooks/useAsync";
+import { fetchOrder } from "../../services/orderApi";
+import { initiatePayment } from "../../services/paymentsApi";
+import { normalizeApiError } from "../../utils/apiError";
+import { formatPrice } from "../../utils/formatPrice";
+import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "./OrdersPage";
+
+function OrderDetailPage() {
+  const { orderId } = useParams();
+  const { data: order, isLoading, error, refetch } = useAsync(() => fetchOrder(orderId), [orderId]);
+
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState(null);
+
+  if (isLoading) return <ContentSkeleton label="در حال دریافت سفارش…" />;
+  if (error) return <ErrorState message={errorMessage(error)} onRetry={refetch} />;
+  if (!order) return null;
+
+  // unpaid/failed are obviously retryable; "pending" means a previous
+  // attempt was started but never finished -- initiating again is safe
+  // (each attempt is its own Payment row).
+  const payable = ["unpaid", "failed", "pending"].includes(order.payment_status);
+
+  const pay = async () => {
+    setPayError(null);
+    setPaying(true);
+    try {
+      const result = await initiatePayment(order.id);
+      window.location.href = result.redirect_url;
+    } catch (err) {
+      setPayError(errorMessage(normalizeApiError(err)));
+      setPaying(false);
+    }
+  };
+
+  return (
+    <div className="order-detail">
+      <div className="page-head">
+        <h1>سفارش <bdi dir="ltr">{order.order_number}</bdi></h1>
+        <Link to="/account/orders/" className="link">بازگشت به سفارش‌ها</Link>
+      </div>
+
+      <div className="order-detail__meta card">
+        <dl>
+          <div><dt>تاریخ ثبت</dt><dd>{faDateTime(order.created_at)}</dd></div>
+          <div>
+            <dt>وضعیت سفارش</dt>
+            <dd>{ORDER_STATUS_LABELS[order.status] || order.status}</dd>
+          </div>
+          <div>
+            <dt>وضعیت پرداخت</dt>
+            <dd>{PAYMENT_STATUS_LABELS[order.payment_status] || order.payment_status}</dd>
+          </div>
+          <div>
+            <dt>روش ارسال</dt>
+            <dd>
+              {order.shipping_method === "express"
+                ? "ارسال اکسپرس"
+                : order.shipping_method === "pickup"
+                  ? "دریافت حضوری"
+                  : "ارسال عادی"}
+            </dd>
+          </div>
+          {order.gift_wrap ? (
+            <div>
+              <dt>بسته‌بندی هدیه</dt>
+              <dd>
+                بله{order.gift_message ? ` — پیام: ${order.gift_message}` : ""}
+              </dd>
+            </div>
+          ) : null}
+          {order.payment_status === "paid" ? (
+            <div>
+              <dt>فاکتور</dt>
+              <dd>
+                <a href={`/api/v1/orders/${order.id}/invoice/`} target="_blank" rel="noopener noreferrer">
+                  مشاهده و چاپ فاکتور
+                </a>
+              </dd>
+            </div>
+          ) : null}
+          {order.estimated_delivery_min && order.estimated_delivery_max ? (
+            <div>
+              <dt>تحویل تخمینی</dt>
+              <dd>
+                {deliveryRange(order.estimated_delivery_min, order.estimated_delivery_max)}
+              </dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {payable ? (
+          <div className="order-detail__pay">
+            <button type="button" className="btn btn--primary" onClick={pay} disabled={paying}>
+              {paying ? "در حال اتصال به درگاه…" : `پرداخت ${formatPrice(order.total)} تومان`}
+            </button>
+            {payError ? <Alert>{payError}</Alert> : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="order-detail__items card">
+        <h2>اقلام سفارش</h2>
+        <table>
+          <thead>
+            <tr><th>کالا</th><th>فی</th><th>تعداد</th><th>جمع</th></tr>
+          </thead>
+          <tbody>
+            {order.items.map((item) => (
+              <tr key={item.id}>
+                <td>
+                  <span className="order-detail__itemline">
+                    <SmartImage image={item.product_image || null} alt="" />
+                    <span>
+                      {item.product_slug ? (
+                        <Link to={`/products/${item.product_slug}/`}>{faDigits(item.product_name)}</Link>
+                      ) : (
+                        faDigits(item.product_name)
+                      )}
+                      <div className="muted" dir="ltr"><bdi dir="ltr">{item.sku}</bdi></div>
+                    </span>
+                  </span>
+                </td>
+                <td>{formatPrice(item.unit_price)}</td>
+                <td>{faDigits(item.quantity)}</td>
+                <td>{formatPrice(item.total_price)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="order-detail__totals card">
+        <dl>
+          <div><dt>جمع کالاها</dt><dd>{formatPrice(order.subtotal)} تومان</dd></div>
+          {order.discount_amount > 0 ? (
+            <div>
+              <dt>تخفیف{order.coupon_code ? ` (${order.coupon_code})` : ""}</dt>
+              <dd>− {formatPrice(order.discount_amount)} تومان</dd>
+            </div>
+          ) : null}
+          <div>
+            <dt>هزینه ارسال</dt>
+            <dd>{order.shipping_cost === 0 ? "رایگان" : `${formatPrice(order.shipping_cost)} تومان`}</dd>
+          </div>
+          <div className="order-detail__grand"><dt>مبلغ کل</dt><dd>{formatPrice(order.total)} تومان</dd></div>
+        </dl>
+      </div>
+
+      <div className="order-detail__address card">
+        <h2>آدرس ارسال</h2>
+        <p>
+          {order.shipping_recipient_name} — <bdi dir="ltr">{faDigits(order.shipping_phone)}</bdi>
+        </p>
+        <p>
+          {formatAddress(order, "shipping_")}
+        </p>
+        <p className="muted">کد پستی: <bdi dir="ltr">{order.shipping_postal_code}</bdi></p>
+      </div>
+    </div>
+  );
+}
+
+export default OrderDetailPage;

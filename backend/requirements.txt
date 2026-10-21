@@ -1,0 +1,73 @@
+# --- Core framework ---------------------------------------------------------
+Django==5.2.18
+djangorestframework==3.17.2
+django-cors-headers==4.4.0
+django-filter==24.3
+django-environ==0.11.2
+
+# --- Database ----------------------------------------------------------------
+psycopg2-binary==2.9.9
+
+# --- Payment gateway HTTP client (Phase C) ------------------------------------
+# Used ONLY by apps/payments/gateways/zarinpal.py to talk to the ZarinPal
+# v4 REST API (payment request + server-side verify). The mock gateway
+# needs no HTTP at all; tests never hit the network (they patch this
+# layer -- see apps/payments/tests/test_zarinpal.py).
+requests==2.33.0
+
+# --- Images --------------------------------------------------------------------
+# Required by Django's ImageField at model/system-check time, not just at
+# actual upload time -- `python manage.py check` (and therefore `migrate`)
+# fails immediately without it. Needed as of Phase 2, which introduced:
+#   - apps.categories.Category.image
+#   - apps.products.Brand.logo
+#   - apps.products.ProductImage.image
+#   - apps.banners.Banner.image
+# Pinned to a version with published Python 3.12 wheels, matching the
+# python:3.12-slim base image in docker/backend/Dockerfile.
+#
+# Deliberately still on the 10.x line (see the dependency-audit report):
+# the 2026 Pillow advisories are fixed only in 12.x, i.e. behind two MAJOR
+# bumps, and this update round was explicitly scoped to patch/minor
+# security fixes. Bumping Pillow is a separate, testable change -- it is
+# the library that parses every uploaded image, so it deserves its own
+# round rather than riding along here.
+Pillow==10.4.0
+
+# --- Bulk catalog import (Phase B) -------------------------------------------------
+# Reads .xlsx workbooks for the admin's "import products from file"
+# feature and `import_products` management command. CSV support is
+# stdlib-only; this adds the Excel half of "CSV/Excel import".
+openpyxl==3.1.5
+
+# --- Admin two-factor auth (Part R4 item 4) --------------------------------
+# TOTP + one-time backup-code devices for the admin login gate. qrcode
+# renders the enrollment QR PNG printed by manage.py enroll_admin_2fa.
+django-otp==1.7.3
+qrcode==8.2
+
+# --- Static & production server -----------------------------------------------
+gunicorn==22.0.0
+whitenoise==6.7.0
+
+# --- Cache ------------------------------------------------------------------
+# Python client for the shared Redis cache production uses (see
+# config/settings/production.py's CACHES). Django's built-in RedisCache
+# backend drives it -- django-redis is deliberately NOT needed.
+redis==5.0.8
+
+# --- Error monitoring (Phase E) -------------------------------------------------
+# Optional at RUNTIME (only initialized when SENTRY_DSN is set -- see
+# config/settings/base.py), but always installed so enabling monitoring is
+# an env change, not an image rebuild.
+sentry-sdk==2.19.2
+
+# NOTE: kept intentionally minimal. The following are deliberately NOT
+# installed, and this is a settled decision, not a placeholder:
+#   - JWT (e.g. djangorestframework-simplejwt): NOT used. Phase 3 chose
+#     session + CSRF authentication instead, and explains why in
+#     config/settings/base.py's REST_FRAMEWORK comment. Not adding this
+#     unless a real architectural reason appears (e.g. a genuinely
+#     separate-origin API consumer), per that phase's own instructions.
+# The following remain genuinely deferred to a future phase that needs them:
+#   - drf-spectacular                 (Phase 10, OpenAPI/Swagger docs)

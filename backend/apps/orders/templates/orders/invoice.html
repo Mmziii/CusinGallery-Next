@@ -1,0 +1,114 @@
+{% load order_extras cusin_images site_extras adminui_extras %}<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>فاکتور سفارش {{ order.order_number }}</title>
+<style>
+  /* Print-optimized invoice (Part 2). Deliberately self-contained CSS so
+     the customer-facing document does not depend on the admin theme. */
+  * { box-sizing: border-box; }
+  body { font-family: Tahoma, "Vazirmatn", sans-serif; color: #1E2412; margin: 0; padding: 24px; font-size: 13px; line-height: 1.9; }
+  .head { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #8A6D1F; padding-bottom: 12px; }
+  .brand { font-size: 20px; font-weight: 800; color: #2F3A18; }
+  .brand small { display: block; font-size: 11px; font-weight: 400; color: #8A6D1F; }
+  .meta { text-align: left; font-size: 12px; }
+  h1 { font-size: 16px; margin: 18px 0 6px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  th, td { border: 1px solid #cfd6c2; padding: 6px 8px; text-align: right; }
+  th { background: #EAEFDD; }
+  .totals { margin-top: 12px; margin-right: auto; width: 320px; }
+  .totals div { display: flex; justify-content: space-between; padding: 3px 0; }
+  .totals .grand { font-weight: 800; border-top: 2px solid #8A6D1F; margin-top: 4px; padding-top: 6px; }
+  .info { margin-top: 16px; font-size: 12px; color: #444; }
+  .gift { background: #FAF7F0; border: 1px dashed #8A6D1F; padding: 8px 10px; margin-top: 12px; }
+  /* Part S4 item 1: the image cell is built by the shared product_thumb
+     helper (apps/core/image_files.py), which ships its own inline
+     placeholder styling -- the same warm-grey field and brand mark as the
+     storefront -- so a missing or broken image never shows a broken icon. */
+  .inv-cell { width: 40px; }
+  .toolbar { margin: 12px 0; }
+  button { background: #637037; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font: inherit; cursor: pointer; }
+  @media print {
+    .toolbar { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" onclick="window.print()">چاپ / ذخیره به PDF</button>
+  </div>
+
+  <div class="head">
+    <div class="brand">
+      {{ site.display_name }}
+      <small>
+        {% with support_phone=site.phone|no_placeholder %}{% if support_phone %}تلفن: <bdi dir="ltr">{{ support_phone|fa_digits }}</bdi>{% endif %}{% endwith %}
+        {% with shop_address=site.address|no_placeholder %}{% if shop_address %} — {{ shop_address }}{% endif %}{% endwith %}
+      </small>
+    </div>
+    <div class="meta">
+      <div>فاکتور سفارش: <b><bdi dir="ltr">{{ order.order_number }}</bdi></b></div>
+      <div>تاریخ ثبت: {{ order.created_at|jdatetime }}</div>
+      <div>وضعیت پرداخت: {{ order.get_payment_status_display }}</div>
+    </div>
+  </div>
+
+  <h1>مشتری</h1>
+  <div>{{ order.shipping_recipient_name }} — <span dir="ltr">{{ order.shipping_phone|fa_digits }}</span></div>
+
+  <h1>اقلام سفارش</h1>
+  <table>
+    <thead>
+      <tr><th>تصویر</th><th>کالا</th><th>شناسه</th><th>فی (تومان)</th><th>تعداد</th><th>جمع (تومان)</th></tr>
+    </thead>
+    <tbody>
+      {% for item in order.items.all %}
+      <tr>
+        <td>
+          {% with img=item.product.images.first %}
+            {% comment %}Part S4 item 1: the shared helper builds both the
+            thumbnail and its placeholder (missing OR broken file).{% endcomment %}
+            {{ img|product_thumb }}
+          {% endwith %}
+        </td>
+        <td>{{ item.product_name }}</td>
+        <td><bdi dir="ltr">{{ item.sku }}</bdi></td>
+        <td>{{ item.unit_price|fa_toman }}</td>
+        <td>{{ item.quantity|fa_digits }}</td>
+        <td>{{ item.total_price|fa_toman }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if order.gift_wrap %}
+  <div class="gift">
+    <b>بسته‌بندی هدیه:</b> بله ({{ order.gift_wrap_fee|fa_toman }} تومان)
+    {% if order.gift_message %}<br><b>پیام هدیه:</b> {{ order.gift_message }}{% endif %}
+  </div>
+  {% endif %}
+
+  <div class="totals">
+    <div><span>جمع اقلام</span><span>{{ order.subtotal|fa_toman }} تومان</span></div>
+    {% if order.discount_amount %}<div><span>تخفیف{% if order.coupon %} (کوپن <bdi dir="ltr">{{ order.coupon.code }}</bdi>){% endif %}</span><span>- {{ order.discount_amount|fa_toman }} تومان</span></div>{% endif %}
+    <div><span>هزینهٔ ارسال ({{ shipping_method_label }})</span><span>{% if order.shipping_cost == 0 %}رایگان{% else %}{{ order.shipping_cost|fa_toman }} تومان{% endif %}</span></div>
+    {% if order.gift_wrap %}<div><span>بسته‌بندی هدیه</span><span>{{ order.gift_wrap_fee|fa_toman }} تومان</span></div>{% endif %}
+    <div class="grand"><span>مبلغ نهایی</span><span>{{ order.total|fa_toman }} تومان</span></div>
+  </div>
+
+  <div class="info">
+    {% if order.shipping_method == "pickup" %}
+      <b>دریافت حضوری.</b>
+      {% with pickup_addr=site.pickup_address|no_placeholder pickup_hrs=site.pickup_hours|no_placeholder %}{% if pickup_addr %} نشانی دریافت: {{ pickup_addr }}.{% endif %}{% if pickup_hrs %} ساعات دریافت: {{ pickup_hrs }}.{% endif %}{% endwith %}
+    {% else %}
+      <b>ارسال به:</b>
+      {{ order.shipping_province }}، {{ order.shipping_city }}، {{ order.shipping_address }}
+      {% if order.tracking_code %}<br><b>کد رهگیری:</b> <bdi dir="ltr">{{ order.tracking_code }}</bdi>{% endif %}
+    {% endif %}
+    <br>
+    {% with support_phone=site.phone|no_placeholder %}{% if support_phone %}تلفن پشتیبانی: <bdi dir="ltr">{{ support_phone|fa_digits }}</bdi> — {% endif %}{% endwith %}
+    {% with shop_address=site.address|no_placeholder %}{% if shop_address %}{{ shop_address }}{% endif %}{% endwith %}
+  </div>
+</body>
+</html>
