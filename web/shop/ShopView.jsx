@@ -603,6 +603,11 @@ function ShopView({ params, fixedBrand = null, products, categories = [], brands
           );
         })()}
 
+        {/* Live mobile audit: the grid needs a name of its own. The page <h1>
+            is «فروشگاه» / «محصولات برند …», so a screen reader landing on the
+            listing hears «محصولات» before the first card. Visually hidden. */}
+        <h2 className="sr-only">محصولات</h2>
+
         {failed ? (
           <ErrorState
             message="دریافت محصولات انجام نشد. لطفاً دوباره تلاش کنید."
