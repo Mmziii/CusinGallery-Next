@@ -2,7 +2,7 @@ import { brandUrl } from "../utils/brands";
 import { faDigits } from "../utils/faDigits";
 import useWishlistStore from "../store/useWishlistStore";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "../utils/nextRoutes";
 
 import useAuthStore from "../store/useAuthStore";
 import { productShape } from "../utils/shapes";

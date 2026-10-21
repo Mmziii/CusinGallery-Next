@@ -29,6 +29,7 @@ function renderAt(path) {
           <Route path="/broken/" element={<BrokenRoute />} />
           <Route path="/" element={<h1>خانهٔ بازیابی‌شده</h1>} />
           <Route path="/shop/" element={<SearchRoute />} />
+          <Route path="/cart/" element={<h1>سبد بازیابی‌شده</h1>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -51,42 +52,56 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("route error recovery navigation", () => {
-  it("resets the route boundary after navigating with the header logo", async () => {
+  it("keeps the header logo reachable from the fallback as a document link home", async () => {
+    // Phase 2: "/" belongs to the Next app, so recovery navigates the DOCUMENT
+    // (the SPA never renders that page itself any more).
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     renderAt("/broken/");
     expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("link", { name: "کازین گالری — صفحه اصلی" }));
+    const logo = screen.getByRole("link", { name: "کازین گالری — صفحه اصلی" });
+    expect(logo.tagName).toBe("A");
+    expect(logo.getAttribute("href")).toBe("/");
+    spy.mockRestore();
+  });
 
-    expect(await screen.findByRole("heading", { name: "خانهٔ بازیابی‌شده" })).toBeTruthy();
+  it("resets the route boundary after navigating to a page the SPA still owns", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    renderAt("/broken/");
+    expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
+
+    // The footer keeps linking the SPA's own pages (cart/checkout/account).
+    fireEvent.click(screen.getByRole("link", { name: "سبد خرید" }));
+
+    expect(await screen.findByRole("heading", { name: "سبد بازیابی‌شده" })).toBeTruthy();
     expect(screen.queryByText("مشکلی پیش آمد")).toBeNull();
     spy.mockRestore();
   });
 
-  it("resets the route boundary after navigating with primary navigation", async () => {
+  it("hands the primary «فروشگاه» entry to the Next shop as a document link", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     renderAt("/broken/");
     expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
 
     const header = document.querySelector(".site-header");
-    fireEvent.click(within(header).getByRole("link", { name: "فروشگاه" }));
-
-    expect(await screen.findByRole("heading", { name: "جستجوی بازیابی‌شده" })).toBeTruthy();
-    expect(screen.queryByText("مشکلی پیش آمد")).toBeNull();
+    const shop = within(header).getByRole("link", { name: "فروشگاه" });
+    expect(shop.getAttribute("href")).toBe("/shop/");
     spy.mockRestore();
   });
 
-  it("also resets after header search changes only the query string", async () => {
+  it("sends the header search to the Next shop (document navigation)", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    renderAt("/shop/?broken=1");
-    expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
+    const assign = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign, replace: vi.fn() });
+    renderAt("/cart/");
 
     const search = screen.getByRole("searchbox", { name: "جستجوی محصول" });
     fireEvent.change(search, { target: { value: "قابلمه" } });
     fireEvent.submit(search.closest("form"));
 
-    expect(await screen.findByRole("heading", { name: "جستجوی بازیابی‌شده" })).toBeTruthy();
-    expect(screen.queryByText("مشکلی پیش آمد")).toBeNull();
+    // /shop/?search=… is Next-owned: the whole document moves, so the SPA's
+    // error boundary is irrelevant by construction.
+    expect(assign).toHaveBeenCalledWith("/shop/?search=%D9%82%D8%A7%D8%A8%D9%84%D9%85%D9%87");
     spy.mockRestore();
   });
 });

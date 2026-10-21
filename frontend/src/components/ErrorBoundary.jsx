@@ -1,6 +1,6 @@
 import { Component } from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
+import { Link } from "../utils/nextRoutes";
 
 import { reportFrontendError } from "../utils/errorReporting";
 

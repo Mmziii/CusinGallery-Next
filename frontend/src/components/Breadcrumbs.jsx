@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "../utils/nextRoutes";
 import PropTypes from "prop-types";
 
 /**

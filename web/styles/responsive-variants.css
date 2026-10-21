@@ -14,3 +14,31 @@
     display: none;
   }
 }
+
+/* Product content sections: the phone gets native accordions, the desktop a
+   plain heading + body. Both are server-rendered; CSS decides, so no markup
+   ever depends on the viewport width measured in JavaScript. */
+.product-detail__section--collapsible { display: none; }
+
+@media (max-width: 767px) {
+  .product-detail__section--static { display: none; }
+  .product-detail__section--collapsible { display: block; }
+}
+
+/* Shop paging, two variants. The desktop grid is the server's page N and is
+   never touched by client-side appends; phones get the appended pages in a
+   second grid that only exists below 768px (empty = no box at all). */
+.shop__more-grid { display: none; }
+
+@media (max-width: 767px) {
+  .shop__more-grid { display: grid; }
+  .shop__more-grid--empty { display: none; }
+}
+
+/* The phone-only load-more failure notice; the desktop pager is unaffected. */
+.shop__load-more-error {
+  margin-top: var(--space-3);
+  color: #b3261e;
+  text-align: center;
+  font-size: var(--font-size-sm);
+}

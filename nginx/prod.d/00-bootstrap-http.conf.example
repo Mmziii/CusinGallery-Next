@@ -143,6 +143,41 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # --- Catalog pages: served by the Next app ---------------------------
+    # /shop/, /products/<slug>/ and /brands/<slug>/ are server-rendered by
+    # Next: every visitor gets real HTML with real Open Graph/JSON-LD, so the
+    # old bot-only /seo/ rewrites are gone (Next serves bots and humans the
+    # same document). Slashed and unslashed spellings both reach Next, which
+    # redirects to the canonical trailing-slash URL; filter/paging query
+    # strings pass through untouched. /robots.txt and /sitemap.xml stay on
+    # Django (exact matches above).
+    location ~ ^/shop/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/products/[^/]+/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
+    location ~ ^/brands/[^/]+/?$ {
+        proxy_pass http://web:3000;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $http_host;
+    }
+
     # --- Storefront build output (frontend container) ---------------------
     # Audit 19 item 5: page requests go to Django (see `location /`), so the
     # bundle, the self-hosted fonts and the brand images need their own
@@ -225,7 +260,9 @@ server {
     # else with the same Persian document and a REAL 404 (plus
     # <meta name="robots" content="noindex">). nginx used to answer every
     # path with the shell and status 200 -- a soft 404.
-    # Phase 1: only home and Next build assets leave the existing SPA path.
+    # Phases 1-2: home, the catalog pages (shop/product/brand -- see the
+    # locations above) and the Next build output leave the SPA path; the
+    # cart/checkout/account/auth/info pages below still answer here.
     location = / {
         proxy_pass http://web:3000;
         proxy_set_header Host $http_host;

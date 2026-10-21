@@ -328,21 +328,33 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                         f"served by the frontend container",
                     )
 
-    def test_product_and_shop_pages_use_the_catch_all_for_humans_too(self):
+    def test_catalog_pages_are_served_by_the_next_app(self):
+        """Phase 2: /shop/, /products/<slug>/ and /brands/<slug>/ are Next SSR.
+
+        Next answers every visitor with real HTML (titles, Open Graph,
+        JSON-LD), so the old crawler-only /seo/ rewrites were removed: a bot
+        must NOT be diverted to Django while a human gets something else. All
+        three paths therefore proxy the web container with the public Host and
+        the X-Forwarded-* chain (Django builds absolute media URLs for the
+        server-rendered page from those headers).
+        """
+        routes = ("^/shop/?$", "^/products/[^/]+/?$", "^/brands/[^/]+/?$")
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
-            product = self._location_body(source, "location ~ ^/products/")
-            if product is None:
-                continue  # the HTTP bootstrap config has no crawler routing
-            with self.subTest(config=path.name, block="products"):
-                # Bot -> /seo/ and human -> catch-all: BOTH end on the backend,
-                # so an unknown slug is a real 404 either way.
-                self.assertEqual(product.count("proxy_pass http://backend_upstream;"), 2)
-                self.assertNotIn("proxy_pass http://frontend_upstream;", product)
-            shop = self._location_body(source, "location = /shop/")
-            with self.subTest(config=path.name, block="shop"):
-                self.assertIn("proxy_pass http://backend_upstream;", shop)
-                self.assertNotIn("proxy_pass http://frontend_upstream;", shop)
+            for route in routes:
+                body = self._location_body(source, f"location ~ {route}")
+                with self.subTest(config=path.name, route=route):
+                    self.assertIsNotNone(body, f"{path.name}: no location for {route}")
+                    self.assertIn("proxy_pass http://web:3000;", body)
+                    self.assertIn("proxy_set_header Host $http_host;", body)
+                    self.assertIn("proxy_set_header X-Forwarded-Proto $scheme;", body)
+                    self.assertIn("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", body)
+                    self.assertNotIn("backend_upstream", body)
+                    self.assertNotIn("frontend_upstream", body)
+            # The bot-only diversion is gone from every stack.
+            with self.subTest(config=path.name, block="crawler map"):
+                self.assertNotIn("$cusin_is_bot", source)
+                self.assertNotIn("/seo/", source)
 
     def test_seo_routes_reach_the_backend_in_every_config(self):
         """/robots.txt and /sitemap.xml are rendered by Django, not the SPA.
