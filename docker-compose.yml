@@ -85,12 +85,28 @@ services:
     depends_on:
       - backend
 
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_ANALYTICS_SCRIPT_URL: ${ANALYTICS_SCRIPT_URL:-}
+        NEXT_PUBLIC_ANALYTICS_SITE_ID: ${ANALYTICS_SITE_ID:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+    restart: unless-stopped
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      SITE_ORIGIN: ${VITE_SITE_ORIGIN:-https://cusin.ir}
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+    depends_on:
+      - backend
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
-      # - "443:443"   # uncomment once HTTPS is configured, see nginx/conf.d/cusin.conf
+      - "${HTTP_PORT:-80}:80"
+      # - "${HTTPS_PORT:-443}:443"   # uncomment once HTTPS is configured, see nginx/conf.d/cusin.conf
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
@@ -100,6 +116,7 @@ services:
     depends_on:
       - backend
       - frontend
+      - web
 
 volumes:
   postgres_data:
