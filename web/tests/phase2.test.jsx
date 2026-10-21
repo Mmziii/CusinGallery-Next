@@ -257,6 +257,11 @@ it("server-renders the shop grid, count and prices from the query", async () => 
   // Breadcrumbs for the filtered category, and its JSON-LD twin.
   expect(html).toContain("آشپزخانه");
   expect(html).toContain("breadcrumb-jsonld");
+  // Live mobile audit: a screen-reader-only «محصولات» heading names the grid,
+  // and it comes BEFORE the grid in document order.
+  const productsHeading = html.indexOf('<h2 class="sr-only">محصولات</h2>');
+  expect(productsHeading).toBeGreaterThan(-1);
+  expect(productsHeading).toBeLessThan(html.indexOf('class="product-grid"'));
 });
 
 it("forwards every filter and sort parameter to Django unchanged", async () => {
@@ -435,6 +440,11 @@ it("404s an unknown brand and renders the brand listing for a real one", async (
   expect(html).toContain('href="/brands/mes-karan/?ordering=price_asc&amp;page=2"');
   expect(html).toContain('href="/brands/mes-karan/?ordering=price_asc&amp;page=8"');
   expect(html).not.toContain("?brand=mes-karan");
+  // The brand listing shares ShopView, so it carries the same hidden heading
+  // before its product grid.
+  const brandProductsHeading = html.indexOf('<h2 class="sr-only">محصولات</h2>');
+  expect(brandProductsHeading).toBeGreaterThan(html.indexOf("محصولات برند"));
+  expect(brandProductsHeading).toBeLessThan(html.indexOf('class="product-grid"'));
 });
 
 it("keeps a stable shop canonical for filtered pages and a self canonical per product", async () => {
