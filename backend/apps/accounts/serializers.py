@@ -1,0 +1,413 @@
+"""
+Accounts serializers.
+
+Covers registration, login, the authenticated user's profile, password
+change/reset, and Address CRUD. See models.py's module docstring for the
+authentication architecture decisions these implement (session + CSRF,
+`username = phone` under the hood, phone-or-email login).
+"""
+from django.contrib.auth import get_user_model
+
+from .passwords import validate_customer_password
+from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
+from django.db.models import Q
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode
+from rest_framework import serializers
+
+from apps.core.serializers import NullToBlankTextMixin
+
+from . import locations, validators
+from .models import Address, phone_validator
+
+User = get_user_model()
+
+
+class RegisterSerializer(NullToBlankTextMixin, serializers.Serializer):
+    """
+    Customer self-registration. A plain Serializer, not a ModelSerializer
+    -- the input shape (password + password_confirm) doesn't map 1:1 onto
+    User's own fields, and `username` is derived internally rather than
+    accepted as input (see models.py's module docstring for why).
+    """
+
+    phone = serializers.CharField(max_length=20)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True)
+    password_confirm = serializers.CharField(write_only=True)
+
+    def validate_phone(self, value):
+        value = validators.validate_address_phone(value)
+        if User.objects.filter(phone__in=[value, "+98" + value[1:], "0098" + value[1:]]).exists():
+            raise serializers.ValidationError("حساب کاربری با این شماره موبایل قبلاً ساخته شده است.")
+        return value
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("حساب کاربری با این ایمیل قبلاً ساخته شده است.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
+            raise serializers.ValidationError({"password_confirm": "رمز عبور و تکرار آن یکسان نیستند."})
+        # CUSTOMER policy only: min 8 chars + ASCII (see passwords.py).
+        # Staff/superuser passwords keep Django's strict validators.
+        try:
+            validate_customer_password(attrs["password"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)})
+        return attrs
+
+    def create(self, validated_data):
+        email = validated_data.get("email") or None  # '' -> None, see User model docstring
+        user = User.objects.create_user(
+            username=validated_data["phone"],
+            phone=validated_data["phone"],
+            email=email,
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+            password=validated_data["password"],
+        )
+        return user
+
+
+class LoginSerializer(NullToBlankTextMixin, serializers.Serializer):
+    """
+    Accepts either phone or email as the identifier. Does NOT go through
+    Django's authenticate()/auth backends -- the user is looked up
+    directly and the password checked manually, then handed to
+    django.contrib.auth.login() in the view (see models.py's module
+    docstring for the full reasoning behind this choice).
+    """
+
+    identifier = serializers.CharField(help_text="شمارهٔ موبایل یا آدرس ایمیل.")
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        identifier = attrs["identifier"].strip()
+        password = attrs["password"]
+        user = User.objects.filter(Q(phone=identifier) | Q(email=identifier)).first()
+
+        # One generic message for "no such account" and "wrong password"
+        # alike, so the response itself never confirms whether a given
+        # phone/email is registered.
+        if user is None or not user.check_password(password):
+            raise serializers.ValidationError(
+                "شمارهٔ موبایل، ایمیل یا رمز عبور نادرست است."
+            )
+        if not user.is_active:
+            raise serializers.ValidationError("این حساب کاربری غیرفعال است.")
+
+        attrs["user"] = user
+        return attrs
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Read-only representation of the authenticated user. `username` is
+    deliberately excluded -- it's an internal implementation detail
+    (set to the user's phone at registration; see models.py), not
+    something the frontend should display or rely on."""
+
+    class Meta:
+        model = User
+        fields = [
+            "id", "first_name", "last_name", "email", "phone",
+            "is_staff", "date_joined", "last_login", "marketing_sms_consent",
+        ]
+        read_only_fields = fields
+
+
+class ProfileUpdateSerializer(NullToBlankTextMixin, serializers.ModelSerializer):
+    """
+    Used for PATCH /me/. Deliberately excludes `phone` -- changing the
+    phone number a real e-commerce account logs in with must require
+    re-verification (an OTP flow proving ownership of the NEW number).
+    SMS delivery infrastructure exists as of Phase D
+    (apps/notifications, used for password-reset codes), but the
+    new-number ownership flow itself is deliberately not part of that
+    phase; until it is built, phone changes stay out of the customer-
+    editable profile.
+    """
+
+    class Meta:
+        model = User
+        fields = ["first_name", "last_name", "email", "marketing_sms_consent"]
+
+    def validate_email(self, value):
+        value = value or None
+        if value:
+            qs = User.objects.filter(email=value).exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError("حساب کاربری با این ایمیل قبلاً ساخته شده است.")
+        return value
+
+
+class ChangePasswordSerializer(NullToBlankTextMixin, serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate_current_password(self, value):
+        user = self.context["request"].user
+        if not user.check_password(value):
+            raise serializers.ValidationError("رمز عبور فعلی نادرست است.")
+        return value
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError({"new_password_confirm": "رمز عبور و تکرار آن یکسان نیستند."})
+        user = self.context["request"].user
+        try:
+            validate_customer_password(attrs["new_password"], user=user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"new_password": list(exc.messages)})
+        return attrs
+
+    def save(self):
+        user = self.context["request"].user
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        return user
+
+
+class PasswordResetRequestSerializer(NullToBlankTextMixin, serializers.Serializer):
+    identifier = serializers.CharField(help_text="شمارهٔ موبایل یا آدرس ایمیل.")
+
+
+class PasswordResetConfirmSerializer(NullToBlankTextMixin, serializers.Serializer):
+    """
+    Two accepted shapes, one outcome (a new password for one user):
+
+      * {uid, token, new_password, new_password_confirm} -- the emailed
+        reset LINK (Django's signed token; single-use because changing
+        the password invalidates it, time-limited by
+        PASSWORD_RESET_TIMEOUT).
+      * {phone, code, new_password, new_password_confirm} -- the SMS
+        one-time CODE for phone-only accounts (Phase D; see
+        models.PhoneResetCode for expiry/single-use/hashing).
+
+    Every rejection -- unknown uid, bad token, unknown phone, wrong /
+    expired / consumed code -- answers with the SAME generic error, so
+    the endpoint enumerates nothing. Brute-force headroom is bounded by
+    the view's password_reset_confirm throttle.
+    """
+
+    uid = serializers.CharField(required=False, allow_blank=True)
+    token = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+    code = serializers.CharField(required=False, allow_blank=True)
+    new_password = serializers.CharField(write_only=True)
+    new_password_confirm = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        generic_link_error = "پیوند بازیابی معتبر نیست یا مهلت آن تمام شده است."
+        generic_code_error = "کد بازیابی معتبر نیست یا مهلت آن تمام شده است."
+        uid = (attrs.get("uid") or "").strip()
+        token = (attrs.get("token") or "").strip()
+        phone = (attrs.get("phone") or "").strip()
+        code = (attrs.get("code") or "").strip()
+
+        user = None
+        reset_code = None
+
+        if uid and token:
+            try:
+                user_pk = force_str(urlsafe_base64_decode(uid))
+                user = User.objects.get(pk=user_pk)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                raise serializers.ValidationError(generic_link_error)
+            if not default_token_generator.check_token(user, token):
+                raise serializers.ValidationError(generic_link_error)
+        elif phone and code:
+            from .models import PhoneResetCode
+
+            candidate_user = User.objects.filter(Q(phone=phone), is_active=True).first()
+            if candidate_user is not None:
+                for open_code in candidate_user.phone_reset_codes.filter(consumed_at__isnull=True):
+                    if open_code.is_valid() and open_code.matches(code):
+                        user = candidate_user
+                        reset_code = open_code
+                        break
+            if user is None:
+                # Same message for unknown phone, wrong code, expired
+                # code and consumed code -- no enumeration, no oracle.
+                raise serializers.ValidationError(generic_code_error)
+        else:
+            raise serializers.ValidationError(
+                "از پیوند بازیابی یا شمارهٔ موبایل و کد بازیابی استفاده کنید."
+            )
+
+        if attrs["new_password"] != attrs["new_password_confirm"]:
+            raise serializers.ValidationError({"new_password_confirm": "رمز عبور و تکرار آن یکسان نیستند."})
+
+        try:
+            validate_customer_password(attrs["new_password"], user=user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"new_password": list(exc.messages)})
+
+        attrs["user"] = user
+        attrs["reset_code"] = reset_code
+        return attrs
+
+    def save(self):
+        user = self.validated_data["user"]
+        user.set_password(self.validated_data["new_password"])
+        user.save(update_fields=["password"])
+        reset_code = self.validated_data.get("reset_code")
+        if reset_code is not None:
+            # Single-use: consume AFTER the password actually changed, so
+            # a failed save never burns a code.
+            reset_code.consume()
+        return user
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    """
+    Handles the single-default-address rule from the application side,
+    matching (not replacing) the database-level partial unique constraint
+    from Phase 2 (`addr_one_default_per_user`). Setting `is_default=True`
+    here first atomically clears any other default address for the same
+    user, so the create/update below never collides with that constraint.
+
+    Part S1 (item 3): explicit field overrides so phone/postal-code use
+    the normalizing validators (Persian digits -> ASCII, exact formats).
+
+    Part S5 item 6: `unit` and `building_number` are REQUIRED for a new
+    address (the courier must find the door; «۰» is the documented value
+    for "no unit"). Addresses saved before that rule survive untouched:
+    a PATCH that leaves an already-empty value empty is accepted, so an
+    old address stays editable -- see `validate()` below.
+    """
+
+    # Declared explicitly so the model field's generic RegexValidator is
+    # replaced by the stricter, normalizing address-phone rule (applied
+    # in validate_phone, which -- unlike `validators=` -- can also
+    # TRANSFORM the stored value into the normalized form).
+    phone = serializers.CharField(max_length=20)
+    unit = serializers.CharField(
+        max_length=20,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        error_messages={
+            "max_length": "واحد حداکثر ۲۰ رقم می‌تواند باشد.",
+        },
+    )
+    building_number = serializers.CharField(
+        max_length=20,
+        required=False,
+        allow_blank=True,
+        allow_null=True,
+        error_messages={
+            "max_length": "پلاک ساختمان حداکثر ۲۰ رقم می‌تواند باشد.",
+        },
+    )
+
+    class Meta:
+        model = Address
+        fields = [
+            "id", "recipient_name", "phone", "province", "city", "address",
+            "postal_code", "unit", "building_number", "is_default",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def to_internal_value(self, data):
+        # JSON clients (the storefront among them) may send null for a
+        # plot/unit they do not have; the model stores "".
+        if isinstance(data, dict):
+            data = dict(data)
+            for key in ("unit", "building_number"):
+                if data.get(key) is None and key in data:
+                    data[key] = ""
+        return super().to_internal_value(data)
+
+    def validate_phone(self, value):
+        return validators.validate_address_phone(value)
+
+    def validate_postal_code(self, value):
+        return validators.validate_postal_code(value)
+
+    def validate_unit(self, value):
+        # An empty value is judged in validate(): it is only acceptable
+        # for a legacy address that already had none.
+        return validators.validate_unit(value) if value else ""
+
+    def validate_building_number(self, value):
+        return validators.validate_building_number(value) if value else ""
+
+    def _require_plot_and_unit(self, attrs):
+        """Part S5 item 6: a new address must carry a plot number and a
+        unit; an address saved before this rule may keep its empty ones."""
+        errors = {}
+        for field in ("building_number", "unit"):
+            stored = ""
+            if self.instance is not None:
+                stored = (getattr(self.instance, field) or "").strip()
+            if field not in attrs:
+                # PATCH: untouched. A required field only matters when it
+                # was never filled in.
+                if self.instance is None and not self.partial:
+                    errors[field] = [validators.PLOT_UNIT_MESSAGES[field]]
+                continue
+            value = (attrs.get(field) or "").strip()
+            if value:
+                attrs[field] = value  # normalized by validate_<field>
+                continue
+            if stored:
+                errors[field] = [
+                    f"{validators.PLOT_UNIT_MESSAGES[field]}" if self.instance is None
+                    else "این مقدار قبلاً ثبت شده است؛ آن را خالی نگذارید."
+                ]
+            elif self.instance is None:
+                errors[field] = [validators.PLOT_UNIT_MESSAGES[field]]
+            # else: a legacy empty value left empty -- nothing to do.
+        if errors:
+            raise serializers.ValidationError(errors)
+        return attrs
+
+    def validate(self, attrs):
+        """Part R3: province must be one of the 31 known provinces and a
+        known city must belong to its province; free-text cities are still
+        allowed. Unchanged values on update skip validation so addresses
+        created before this rule stay editable.
+
+        Part S5 item 6: plot/unit required for new addresses -- see
+        _require_plot_and_unit above (legacy empty values are tolerated).
+        """
+        attrs = self._require_plot_and_unit(attrs)
+        instance = self.instance
+        province = attrs.get("province", getattr(instance, "province", None))
+        city = attrs.get("city", getattr(instance, "city", None))
+        if (
+            instance is not None
+            and province == instance.province
+            and city == instance.city
+        ):
+            return attrs
+        error = locations.validate_province_city(province or "", city or "")
+        if error:
+            raise serializers.ValidationError(error)
+        return attrs
+
+    def create(self, validated_data):
+        user = self.context["request"].user
+        with transaction.atomic():
+            if validated_data.get("is_default"):
+                Address.objects.filter(user=user, is_default=True).update(is_default=False)
+            return Address.objects.create(user=user, **validated_data)
+
+    def update(self, instance, validated_data):
+        with transaction.atomic():
+            if validated_data.get("is_default"):
+                Address.objects.filter(user=instance.user, is_default=True).exclude(
+                    pk=instance.pk
+                ).update(is_default=False)
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+        return instance

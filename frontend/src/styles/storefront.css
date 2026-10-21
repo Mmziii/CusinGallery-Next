@@ -1,0 +1,3542 @@
+/**
+ * Storefront styles -- the real UI layer built on the Phase 1 design
+ * tokens (variables.css). RTL-first: spacing uses logical properties so
+ * direction is handled by <html dir="rtl">.
+ */
+
+/* ============================================================ Buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn--primary { background: var(--color-primary); color: var(--color-button-text, #fff); }
+.btn--primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+.btn--accent { background: var(--color-accent); color: #fff; }
+.btn--outline {
+  background: transparent;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+.btn--outline:hover:not(:disabled) { background: rgba(138, 109, 75, 0.08); }
+.btn--sm { padding: 6px 12px; font-size: 0.8rem; }
+.btn--block { width: 100%; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 0;
+  font-size: var(--font-size-sm);
+}
+.link:hover { text-decoration: underline; }
+.link-danger {
+  background: none;
+  border: none;
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  padding: 0;
+}
+.muted { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+/* =============================================================== Forms */
+
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--space-3); }
+.field span { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.field input,
+.field textarea,
+.field select,
+select,
+input[type="search"],
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  width: 100%;
+}
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid rgba(138, 109, 75, 0.35);
+  border-color: var(--color-primary);
+}
+.field-row { display: flex; gap: var(--space-3); }
+.field-row .field { flex: 1; }
+.checkbox { display: flex; align-items: center; gap: var(--space-2); }
+.checkbox input { width: auto; }
+
+/* =============================================================== Alerts */
+
+.alert {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  margin: var(--space-2) 0;
+}
+.alert--error { background: #fdecea; color: var(--color-danger); border: 1px solid #f5c6c0; }
+.alert--success { background: #e8f5ee; color: var(--color-success); border: 1px solid #bfe3cf; }
+.alert--info { background: #fdf3e2; color: var(--color-warning); border: 1px solid #f0dcb4; }
+
+/* =========================================================== Spin/empty */
+
+.spinner-wrap { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-5); justify-content: center; color: var(--color-text-muted); }
+.spinner {
+  width: 20px; height: 20px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state { text-align: center; padding: var(--space-6) var(--space-3); }
+.empty-state__title { font-size: var(--font-size-lg); margin-bottom: var(--space-3); }
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+.card h2 { margin-top: 0; font-size: var(--font-size-lg); }
+
+.page-head { display: flex; align-items: center; justify-content: space-between; margin: var(--space-4) 0; }
+
+/* ============================================================== Header */
+
+.site-header { background: var(--color-header-bg, var(--color-surface)); color: var(--color-header-text, var(--color-text)); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 50; }
+.site-header__inner { display: flex; align-items: center; gap: var(--space-4); padding-block: var(--space-3); }
+.site-header__brand { font-size: var(--font-size-xl); font-weight: 800; color: var(--color-header-brand, var(--color-primary)); }
+.site-header__brand span { color: var(--color-header-accent, var(--color-accent)); }
+.site-header__search { flex: 1; display: flex; gap: var(--space-2); max-width: 520px; }
+.site-header__nav { display: flex; gap: var(--space-3); font-weight: 600; }
+.site-header__nav a.active { color: var(--color-accent); }
+.site-header__actions { display: flex; align-items: center; gap: var(--space-3); margin-inline-start: auto; }
+.site-header__burger { display: none; background: none; border: none; font-size: 1.4rem; cursor: pointer; }
+.site-header__mobile { display: none; }
+
+.cart-link { position: relative; font-size: 1.4rem; }
+.cart-link__badge {
+  position: absolute;
+  top: -6px;
+  inset-inline-start: -10px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.7rem;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.user-menu { position: relative; }
+.user-menu__trigger {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.user-menu__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2);
+  z-index: 60;
+}
+.user-menu__panel a, .user-menu__panel button {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  text-align: start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.user-menu__panel a:hover, .user-menu__panel button:hover { background: var(--color-bg); }
+
+.category-bar { background: var(--color-bg); border-bottom: 1px solid var(--color-border); }
+.category-bar__inner { display: flex; gap: var(--space-4); overflow-x: auto; padding-block: var(--space-2); }
+.category-bar__inner a { white-space: nowrap; font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.category-bar__inner a:hover { color: var(--color-accent); }
+
+/* ============================================================== Footer */
+
+.site-footer { background: #241f1a; color: #d9d2c9; margin-top: var(--space-6); }
+.site-footer__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+}
+.site-footer h3 { color: #fff; }
+.site-footer h4 { color: #fff; margin-bottom: var(--space-2); }
+.site-footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.site-footer a:hover { color: #fff; }
+.site-footer__bottom { border-top: 1px solid #3b332b; padding-block: var(--space-3); font-size: var(--font-size-sm); }
+
+/* =============================================================== Banner */
+
+.banner { position: relative; border-radius: var(--radius-lg); overflow: hidden; margin-block: var(--space-4); }
+.banner__slide { position: relative; }
+.banner__slide img { width: 100%; height: 340px; object-fit: cover; }
+.banner__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: linear-gradient(270deg, rgba(24, 18, 12, 0.72), rgba(24, 18, 12, 0.15));
+  color: #fff;
+}
+.banner__overlay h2 { margin: 0; font-size: var(--font-size-2xl); }
+.banner__overlay p { margin: 0; max-width: 480px; }
+.banner__overlay .btn { align-self: flex-start; margin-top: var(--space-2); }
+.banner__dots { position: absolute; bottom: 14px; inset-inline-start: 50%; transform: translateX(50%); display: flex; gap: 8px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; border: none; background: rgba(255, 255, 255, 0.5); cursor: pointer; padding: 0; }
+.dot--active { background: #fff; }
+
+/* ============================================================= Sections */
+
+.section { margin-block: var(--space-6); }
+.section__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-3); }
+.section__head h2 { margin: 0; font-size: var(--font-size-xl); }
+.section__head a { color: var(--color-primary); font-size: var(--font-size-sm); }
+
+.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); }
+.category-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  transition: box-shadow 0.15s ease;
+}
+.category-card:hover { box-shadow: var(--shadow-md); }
+.category-card img { width: 72px; height: 72px; object-fit: cover; border-radius: 50%; }
+
+/* ================================================================ Deals */
+
+.deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: var(--space-3); }
+.deal-card {
+  display: flex;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  align-items: center;
+}
+.deal-card img { width: 84px; height: 84px; object-fit: cover; border-radius: var(--radius-sm); }
+.deal-card__name { font-weight: 700; margin-bottom: var(--space-1); }
+.deal-card__sale { color: var(--color-accent); font-weight: 800; }
+.deal-card__regular { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-inline-start: var(--space-2); }
+.deal__countdown {
+  display: inline-block;
+  margin-top: var(--space-1);
+  background: #241f1a;
+  color: #ffd8a8;
+  padding: 2px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  letter-spacing: 1px;
+}
+.deal__ended { color: var(--color-text-muted); }
+
+/* ========================================================= Product grid */
+
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); }
+
+.product-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s ease;
+}
+.product-card:hover { box-shadow: var(--shadow-md); }
+.product-card__media { position: relative; display: block; }
+.product-card__media img { width: 100%; height: 190px; object-fit: cover; }
+.product-card__placeholder {
+  height: 190px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+.product-card__sale {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.product-card__body { padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
+.product-card__name { font-weight: 700; line-height: 1.4; }
+.product-card__name:hover { color: var(--color-accent); }
+.product-card__brand { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.product-card__footer { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.product-card__actions { display: flex; gap: var(--space-2); align-items: center; }
+
+.icon-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+}
+.icon-btn--active { color: var(--color-accent); border-color: var(--color-accent); }
+.icon-btn:disabled { opacity: 0.6; cursor: default; }
+.icon-btn--lg { width: 46px; height: 46px; font-size: 1.3rem; }
+
+.stock { font-size: var(--font-size-sm); border-radius: 999px; padding: 2px 10px; }
+.stock--in_stock { background: #e8f5ee; color: var(--color-success); }
+.stock--low_stock { background: #fdf3e2; color: var(--color-warning); }
+.stock--out_of_stock { background: #fdecea; color: var(--color-danger); }
+
+.price { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.price__current { font-weight: 800; }
+.price--sm .price__current { font-size: 1rem; }
+.price--lg .price__current { font-size: var(--font-size-xl); }
+.price__compare { color: var(--color-text-muted); text-decoration: line-through; font-size: var(--font-size-sm); }
+.price__unit { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.price__badge { background: var(--color-accent); color: #fff; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; }
+
+/* ================================================================= Shop */
+
+.shop { display: grid; grid-template-columns: 250px 1fr; gap: var(--space-4); padding-block: var(--space-4); }
+.shop__sidebar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  align-self: start;
+  position: sticky;
+  top: calc(var(--site-header-height, 76px) + var(--space-4, 16px));
+  max-height: calc(100vh - var(--site-header-height, 76px) - var(--space-4, 16px) - var(--space-4, 16px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+  z-index: 1;
+}
+
+.shop__sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.shop__sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.shop__sidebar::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
+.shop__sidebar h2 { font-size: var(--font-size-lg); margin-top: 0; }
+.filter-group { margin-bottom: var(--space-4); }
+.filter-group h3 { font-size: var(--font-size-sm); margin-bottom: var(--space-2); color: var(--color-text-muted); }
+.filter-group__row { display: flex; gap: var(--space-2); }
+/* Part R5 item 8: per-value product counts in the attribute facet groups. */
+.filter-group__count { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+/* ============ PART S5 item 7: filter transitions ====================
+   Filtering keeps the previous results on screen while the new page is in
+   flight (dimmed + aria-busy) and animates the change instead of replacing
+   the layout: cards fade+rise with a ~20ms/card stagger, chips scale in,
+   filter groups and the mobile drawer open with grid-template-rows
+   0fr -> 1fr. Everything uses transform/opacity only, runs in 180-280ms
+   with the same easing (cubic-bezier(0.2, 0.8, 0.2, 1)) and collapses to
+   instant under prefers-reduced-motion. */
+
+.shop__results { transition: opacity 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.shop__results--loading { opacity: .5; }
+/* While a new page is loading the stale cards are dimmed and inert, so a
+   fast click cannot open a product the next page may not contain. */
+.shop__results--loading .product-grid { pointer-events: none; }
+
+.product-grid__cell { display: grid; animation: filter-card-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes filter-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.shop__chip { animation: filter-chip-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes filter-chip-in {
+  from { opacity: 0; transform: scale(.92); }
+  to { opacity: 1; transform: none; }
+}
+
+.filter-group__toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+  width: 100%; padding: 0; margin: 0;
+  background: none; border: none; cursor: pointer; font: inherit; color: inherit; text-align: start;
+}
+.filter-group__toggle svg { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.filter-group--collapsed h3 { margin-bottom: 0; }
+.filter-group--collapsed .filter-group__toggle svg { transform: rotate(-90deg); }
+.filter-group__body {
+  display: grid; grid-template-rows: 1fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 220ms;
+  visibility: visible;
+}
+.filter-group--collapsed .filter-group__body { grid-template-rows: 0fr; visibility: hidden; }
+.filter-group__body-inner { min-height: 0; overflow: hidden; }
+
+/* Mobile: the whole filter column is a drawer opened from its header. */
+.shop__filters-toggle {
+  display: none; align-items: center; justify-content: space-between; gap: var(--space-2);
+  width: 100%; padding: 0;
+  background: none; border: none; cursor: pointer; font: inherit; color: inherit;
+}
+.shop__filters-toggle svg { transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.shop__filters { display: grid; grid-template-rows: 1fr; }
+.shop__filters-inner { min-height: 0; }
+
+@media (max-width: 1024px) {
+  .shop__filters-toggle { display: flex; }
+  .shop__filters {
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition: grid-template-rows 220ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 220ms;
+  }
+  .shop__filters--open { grid-template-rows: 1fr; visibility: visible; }
+  .shop__filters--open .shop__filters-toggle svg,
+  .shop__filters-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .shop__filters-inner { overflow: hidden; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop__results, .filter-group__body, .filter-group__toggle svg,
+  .shop__filters, .shop__filters-toggle svg { transition: none; }
+  .product-grid__cell, .shop__chip { animation: none; }
+}
+.shop__toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); }
+.shop__toolbar h1 { margin: 0; font-size: var(--font-size-xl); }
+.shop__toolbar label { display: flex; align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); }
+.shop__search-note { color: var(--color-text-muted); }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: var(--space-3); margin-top: var(--space-5); }
+.pagination button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  cursor: pointer;
+}
+.pagination button:disabled { opacity: 0.5; cursor: default; }
+
+/* ======================================================= Product detail */
+
+/* The gallery's sticky travel ends at the primary row, before related/reviews. */
+.product-detail { padding-block: var(--space-4); }
+.product-detail__body { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: var(--space-5); align-items: start; }
+.product-detail__gallery { min-width: 0; position: sticky; top: calc(var(--site-header-height, 76px) + 16px); }
+.product-detail__sku { color: var(--color-text-muted); font-size: var(--font-size-xs); margin-block: var(--space-2) 0; }
+.product-detail__content { margin-top: var(--space-5); }
+.product-detail__section { border-top: 1px solid var(--color-border); padding-block: var(--space-3); }
+.product-detail__section h2 { font-size: var(--font-size-lg); margin: 0 0 var(--space-3); }
+.product-detail__section summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; min-height: 44px; }
+.product-detail__section summary::-webkit-details-marker { display: none; }
+.product-detail__section summary h2 { margin: 0; }
+.product-detail__section[open] summary { margin-bottom: var(--space-3); }
+.product-detail__section[open] summary svg { transform: rotate(180deg); }
+.product-detail__related { margin-top: var(--space-5); }
+@media (max-width: 767px) {
+  .product-detail__body { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .product-detail__gallery { position: static; }
+  .product-detail__section .specs th { width: 35%; }
+}
+
+/* --- Part S5 item 3: gallery (main image + thumbnail row) --- */
+/* The stage owns the height and clips its layers, so switching images can
+   never shift the layout (the placeholder fills the same box). */
+.product-gallery__stage {
+  position: relative; height: 420px; overflow: hidden;
+  border-radius: var(--radius-md); border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.product-gallery__layer { position: absolute; inset: 0; }
+.product-gallery__open { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: transparent; cursor: zoom-in; }
+.product-gallery__open:focus-visible { outline: 3px solid var(--brand-gold); outline-offset: -4px; }
+.product-gallery__layer picture { display: block; width: 100%; height: 100%; }
+.product-gallery__layer img { width: 100%; height: 100%; object-fit: contain; }
+.product-gallery__layer--active { animation: gallery-fade-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.product-gallery__layer--leaving { animation: gallery-fade-out 200ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards; pointer-events: none; }
+@keyframes gallery-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gallery-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.product-gallery__stage .img-placeholder { height: 100%; border: none; }
+
+.product-detail__thumbs {
+  display: flex; gap: var(--space-2); margin-top: var(--space-2);
+  overflow-x: auto; flex-wrap: nowrap; scroll-snap-type: x mandatory;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+}
+.thumb {
+  width: 72px; height: 72px; flex: 0 0 auto; scroll-snap-align: start;
+  border: 2px solid var(--color-border); border-radius: var(--radius-sm);
+  padding: 0; cursor: pointer; overflow: hidden; background: #fff;
+  transition: border-color .18s ease;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+/* The active thumbnail is ringed in brand green. */
+.thumb--active { border-color: var(--brand-green); box-shadow: 0 0 0 2px var(--brand-green-tint); }
+.thumb:focus-visible { outline: 2px solid var(--brand-green-dark); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .product-gallery__layer--active, .product-gallery__layer--leaving { animation: none; }
+  .product-gallery__layer--leaving { display: none; }
+}
+
+.product-detail__info h1 { font-size: var(--font-size-xl); margin: var(--space-2) 0; }
+.product-detail__brand { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.product-detail__short { color: var(--color-text-muted); }
+.product-detail__buy { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); flex-wrap: wrap; }
+
+.breadcrumb { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+.breadcrumb a:hover { color: var(--color-accent); }
+
+.qty-picker {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.qty-picker button { width: 38px; height: 42px; border: none; background: var(--color-bg); cursor: pointer; font-size: 1.1rem; }
+.qty-picker span { min-width: 42px; text-align: center; font-weight: 700; }
+
+.variant-select { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); }
+.variant-select__group { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.chip {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.chip--active { border-color: var(--color-accent); color: var(--color-accent); font-weight: 700; }
+
+.product-detail__description { white-space: pre-line; line-height: 2; }
+
+.specs { width: 100%; border-collapse: collapse; }
+.specs th, .specs td { border: 1px solid var(--color-border); padding: 10px 14px; text-align: start; font-size: var(--font-size-sm); }
+.specs th { background: var(--color-bg); width: 200px; }
+
+.related-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--space-3); }
+.related-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: var(--font-size-sm);
+}
+.related-card img { width: 100%; height: 130px; object-fit: cover; }
+.related-card span { padding: 6px 12px 0; }
+
+/* Part R5 item 10: recently-viewed strip (home / product / cart). */
+.recently-viewed { margin-top: var(--space-5); }
+.recently-viewed__heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.recently-viewed__heading h2 { margin: 0; }
+.recently-viewed__arrows { display: flex; gap: var(--space-2); }
+.recently-viewed__track {
+  --recent-card-size: calc((100% - 4 * var(--space-3)) / 5);
+  display: flex; flex-wrap: nowrap; gap: var(--space-3); min-width: 0;
+  overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain; scrollbar-width: thin; padding-block: 4px 12px;
+}
+.recently-viewed__item { flex: 0 0 var(--recent-card-size); min-width: 0; display: flex; scroll-snap-align: start; }
+.recently-viewed__item > .product-card { width: 100%; }
+@media (max-width: 1279px) {
+  .recently-viewed__track { --recent-card-size: calc((100% - 3 * var(--space-3)) / 4); }
+}
+@media (max-width: 1023px) {
+  .recently-viewed__track { --recent-card-size: calc((100% - 2 * var(--space-3)) / 3); }
+}
+@media (max-width: 767px) {
+  .recently-viewed__track { --recent-card-size: calc((100% - 1.3 * var(--space-2)) / 2.3); gap: var(--space-2); }
+}
+.related-card__price { font-weight: 700; padding-bottom: var(--space-2) !important; color: var(--color-primary); }
+
+/* ============================================================== Reviews */
+
+.reviews { grid-column: 1 / -1; margin-top: var(--space-4); }
+.reviews__summary { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.reviews__avg { font-size: var(--font-size-2xl); font-weight: 800; }
+.reviews__count { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.reviews__list { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-4); }
+
+.review { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-3); }
+.review header { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-1); }
+.review__verified { background: #e8f5ee; color: var(--color-success); font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; }
+.review h4 { margin: var(--space-1) 0; }
+.review p { margin: 0 0 var(--space-1); color: var(--color-text); }
+.review time { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.review__actions { display: flex; justify-content: space-between; align-items: center; }
+
+.stars { color: #d8d2c8; letter-spacing: 2px; }
+.star--on { color: #e8a33d; }
+.stars--sm { font-size: 0.85rem; }
+.rating-input button { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #d8d2c8; padding: 0 2px; }
+.rating-input .star--on { color: #e8a33d; }
+
+.review-form { display: flex; flex-direction: column; gap: var(--space-2); max-width: 560px; }
+.review-form-wrap { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); }
+
+/* ================================================================= Cart */
+
+/* Part S5 follow-up 4 item 2(b): page titles state their own color instead
+   of inheriting whatever the surrounding layout happens to use. The owner
+   could not read «سبد خرید» on the cart page; the measured cascade showed
+   the title was NOT washed out (dark green on ivory, 11.3:1 -- see
+   src/styles/contrast.computed.test.jsx, which proves it), but relying on
+   an inherited/global h1 rule is exactly how a title becomes invisible the
+   day an ancestor changes color, so the title now owns its color. */
+.page-title {
+  color: var(--brand-green-dark);
+  font-size: var(--font-size-xl);
+  margin: 0 0 var(--space-3);
+}
+
+.cart-page__grid { display: grid; grid-template-columns: 1fr 320px; gap: var(--space-4); align-items: start; }
+.cart-page__items { display: flex; flex-direction: column; gap: var(--space-3); }
+.cart-item {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  gap: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  align-items: center;
+}
+.cart-item img { width: 90px; height: 90px; object-fit: cover; border-radius: var(--radius-sm); }
+.cart-item__noimage { width: 90px; height: 90px; background: var(--color-bg); border-radius: var(--radius-sm); }
+.cart-item__name { font-weight: 700; }
+.cart-item__variant, .cart-item__unit { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.cart-item__reason { color: var(--color-danger); font-size: var(--font-size-sm); }
+.cart-item__controls { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+.cart-item__total { font-weight: 800; }
+.cart-item--unavailable { opacity: 0.75; }
+
+/* Part S5 follow-up 4 item 4: the sticky summary must belong to a wrapper
+   that ends BEFORE the next section. `.cart-page__body`/`.checkout__body`
+   are that wrapper: they hold only the items+summary grid, they are a
+   stacking context of their own (so nothing inside can paint over the
+   sticky header at z 60, the mobile drawer at 115 or the mini-cart at 116),
+   and the sticky box inside them therefore stops before «اخیراً دیده‌اید».
+   Sticky is desktop-only: below the breakpoints the summaries are static. */
+.cart-page__body, .checkout__body { position: relative; z-index: 0; }
+.cart-page__summary, .checkout__summary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  position: sticky;
+  top: 120px;
+  z-index: 1;
+}
+.cart-page__summary dl, .checkout__summary dl, .checkout-done__totals, .payment-result__details, .order-detail__totals dl { margin: 0 0 var(--space-3); }
+.cart-page__summary dl > div, .checkout__summary dl > div, .checkout-done__totals > div, .payment-result__details > div, .order-detail__totals dl > div {
+  display: flex;
+  justify-content: space-between;
+  padding-block: 6px;
+}
+.checkout__grand, .checkout-done__grand, .order-detail__grand {
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2) !important;
+  font-weight: 800;
+}
+.cart-page__note, .checkout__note { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+/* ============================================================= Checkout */
+
+.checkout__grid { display: grid; grid-template-columns: 1fr 340px; gap: var(--space-4); align-items: start; }
+.checkout__section { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); }
+/* Part S5 item 4: a section holding an unfixed problem gets a visible
+   (but calm) accent, and sections are programmatically focusable so the
+   first problem can be scrolled to and focused. */
+.checkout__section:focus-visible, .checkout__summary:focus-visible { outline: 2px solid var(--brand-green-dark); outline-offset: 2px; }
+.checkout__section--attention { border-color: var(--color-error, #b42318); }
+.checkout__issue { color: var(--color-error, #b42318); font-size: var(--font-size-sm); font-weight: 600; margin: var(--space-2) 0 0; }
+.checkout__notice { background: var(--brand-green-tint); border-radius: var(--radius-md); padding: var(--space-3); margin: var(--space-2) 0 var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.checkout__notice p { margin: 0; font-size: var(--font-size-sm); }
+.checkout__checklist { list-style: none; padding: var(--space-2) 0 0; margin: var(--space-2) 0 0; border-top: 1px dashed var(--color-border); display: flex; flex-direction: column; gap: 4px; }
+.checkout__checklist li { font-size: var(--font-size-sm); }
+.checkout__checklist .link { text-align: start; }
+.checkout__mode-switch { display: flex; gap: var(--space-4); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.checkout__mode-switch label { display: flex; gap: var(--space-2); align-items: center; }
+.checkout__items { list-style: none; padding: 0; margin: 0 0 var(--space-3); font-size: var(--font-size-sm); }
+.checkout__items li { display: flex; justify-content: space-between; padding-block: 4px; border-bottom: 1px dashed var(--color-border); }
+
+.address-list { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-3); }
+.address-card {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+.address-card input { margin-top: 4px; }
+.address-card--static { cursor: default; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.address-card__default { background: var(--color-primary); color: #fff; font-style: normal; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; margin-inline-start: var(--space-2); }
+.address-card__actions { display: flex; gap: var(--space-2); align-items: center; }
+.address-form__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-3); }
+.field--wide { grid-column: 1 / -1; }
+
+.coupon-row { display: flex; gap: var(--space-2); }
+.coupon-row input { max-width: 260px; }
+
+.checkout-done { max-width: 560px; margin-inline: auto; padding-block: var(--space-5); }
+.checkout-done h1 { font-size: var(--font-size-xl); }
+.checkout-done__later { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+/* ====================================================== Payment result */
+
+.payment-result { text-align: center; max-width: 520px; margin-inline: auto; padding-block: var(--space-6); }
+.payment-result__icon {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem;
+  margin: 0 auto var(--space-3);
+  color: #fff;
+}
+.payment-result--success .payment-result__icon { background: var(--color-success); }
+.payment-result--failed .payment-result__icon { background: var(--color-danger); }
+/* Phase C: cancelled and pending are their own states, not shades of
+   "failed" -- cancelled is a normal customer action (neutral), pending
+   means the result is not final yet (warning). */
+.payment-result--cancelled .payment-result__icon { background: var(--color-text-muted); }
+.payment-result--pending .payment-result__icon { background: var(--color-warning); }
+.payment-result__lead { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: var(--space-4); }
+.payment-result__details { text-align: start; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-4); margin-bottom: var(--space-4); }
+.payment-result__actions { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
+
+/* ================================================================= Auth */
+
+.auth-page { display: flex; justify-content: center; padding-block: var(--space-6); }
+.auth-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-sm);
+}
+.auth-card h1 { font-size: var(--font-size-lg); margin-top: 0; }
+.auth-card__links { display: flex; justify-content: space-between; margin-top: var(--space-3); font-size: var(--font-size-sm); }
+.auth-card__links a { color: var(--color-primary); }
+/* Phase D: helper copy + stacked secondary actions on the reset pages. */
+.reset-help { display: block; font-size: var(--font-size-sm); color: var(--color-text-muted); margin: var(--space-3) 0; line-height: 1.8; }
+.auth-card .btn--block + .btn--block { margin-top: var(--space-2); }
+.auth-card .reset-help.link { text-align: center; }
+
+/* ============================================================== Account */
+
+.account { display: grid; grid-template-columns: 220px 1fr; gap: var(--space-4); padding-block: var(--space-4); }
+.account__nav {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: start;
+  position: sticky;
+  top: 120px;
+  z-index: 1;
+}
+.account__nav h2 { font-size: var(--font-size-base); margin: 0 0 var(--space-2); }
+.account__nav a { padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-sm); }
+.account__nav a.active { background: rgba(138, 109, 75, 0.12); color: var(--color-primary-dark); font-weight: 700; }
+
+.order-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.order-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.order-row:hover { box-shadow: var(--shadow-sm); }
+.order-row > div:first-child { display: flex; flex-direction: column; }
+.order-row__meta { display: flex; gap: var(--space-2); }
+.order-row__total { font-weight: 800; }
+
+.tag { font-size: 0.72rem; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.tag--paid { background: #e8f5ee; color: var(--color-success); }
+.tag--unpaid { background: #fdf3e2; color: var(--color-warning); }
+.tag--pending { background: #eef2f7; color: #48607a; }
+.tag--failed { background: #fdecea; color: var(--color-danger); }
+.tag--refunded { background: #f0ecf7; color: #5d4a8a; }
+.tag--status-confirmed, .tag--status-processing { background: #eef2f7; color: #48607a; }
+.tag--status-shipped, .tag--status-delivered { background: #e8f5ee; color: var(--color-success); }
+.tag--status-cancelled, .tag--status-returned { background: #fdecea; color: var(--color-danger); }
+.tag--status-pending { background: #fdf3e2; color: var(--color-warning); }
+.tag--review-approved { background: #e8f5ee; color: var(--color-success); }
+.tag--review-pending { background: #fdf3e2; color: var(--color-warning); }
+.tag--review-rejected { background: #fdecea; color: var(--color-danger); }
+
+.order-detail table { width: 100%; border-collapse: collapse; }
+.order-detail th, .order-detail td { border-bottom: 1px solid var(--color-border); padding: 10px 8px; text-align: start; font-size: var(--font-size-sm); }
+.order-detail__meta dl > div { display: flex; justify-content: space-between; padding-block: 4px; }
+.order-detail__pay { margin-top: var(--space-3); }
+
+.review-list { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-3); }
+
+/* ========================================================== Responsive */
+
+@media (max-width: 1024px) {
+  .shop { grid-template-columns: 1fr; }
+  .shop__sidebar { position: static; max-height: none; overflow-y: visible; }
+}
+
+/* PR 19: header-specific rules are split off at the phone boundary. Phones
+   are <= 767px while the desktop pill starts at 768px, so the two layouts
+   must never share a viewport (the rest of this block keeps its historical
+   768px layouts, pinned by StickyLayout.test.jsx). */
+@media (max-width: 767px) {
+  .site-header__inner { flex-wrap: wrap; }
+  .site-header__search { order: 3; flex-basis: 100%; max-width: none; }
+  .site-header__nav { display: none; }
+  .site-header__burger { display: block; }
+  .site-header__mobile {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    gap: var(--space-2);
+  }
+  .category-bar { display: none; }
+}
+
+@media (max-width: 768px) {
+  .cart-page__grid, .checkout__grid { grid-template-columns: 1fr; }
+  .cart-page__summary, .checkout__summary { position: static; }
+  .account { grid-template-columns: 1fr; }
+  .account__nav { position: static; flex-direction: row; flex-wrap: wrap; }
+  .cart-item { grid-template-columns: 70px 1fr; }
+  .cart-item__controls { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+  .banner__slide img { height: 240px; }
+  .field-row { flex-direction: column; gap: 0; }
+  .address-form__grid { grid-template-columns: 1fr; }
+}
+
+/* ================================================== Shipping methods */
+
+.shipping-methods { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-2); }
+.shipping-method {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  cursor: pointer;
+}
+.shipping-method__body { display: flex; flex-direction: column; flex: 1; }
+.shipping-method__cost { font-weight: 800; white-space: nowrap; }
+
+/* ============================================ Trust/info pages (Phase E) */
+
+.info-page { max-width: 760px; padding-block: var(--space-6); }
+.info-page h1 { font-size: var(--font-size-xl); margin-bottom: var(--space-4); }
+.info-page__body { padding: var(--space-5); line-height: 2; }
+.info-page__body h2 { font-size: var(--font-size-lg); margin: var(--space-4) 0 var(--space-2); }
+.info-page__body ul { padding-inline-start: var(--space-4); margin-bottom: var(--space-3); }
+.info-page__body li { margin-bottom: var(--space-2); }
+.info-page__facts { margin: var(--space-3) 0; }
+.info-page__facts > div { display: flex; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px dashed var(--color-border); }
+.info-page__facts dt { min-width: 140px; color: var(--color-text-muted); }
+
+/* Visible "owner must edit this" marker on placeholder trust pages. */
+.owner-edit-notice {
+  background: #fdf3e2;
+  border: 1px solid #f0dcb4;
+  color: var(--color-warning);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  font-size: var(--font-size-sm);
+  line-height: 1.9;
+}
+
+/* Footer: business info + e-namad badge slot. */
+.site-footer__contact { font-size: var(--font-size-sm); color: inherit; opacity: 0.85; }
+.site-footer__enamad {
+  min-height: 96px;
+  border: 2px dashed currentColor;
+  border-radius: var(--radius-md);
+  opacity: 0.55;
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--font-size-sm);
+  padding: var(--space-2);
+  text-align: center;
+}
+
+/* ============================================ Field help (Part 1) */
+.field-help {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: calc(var(--space-1) * -1) 0 var(--space-2);
+  line-height: 1.8;
+}
+.field-help--error { color: var(--color-error); font-weight: 600; }
+
+/* ============================ Guest cart + merge notice (Part 1) */
+.cart-page__guest-note { margin-bottom: var(--space-3); }
+.cart-page__summary { padding: var(--space-4); }
+.cart-page__actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
+.merge-notice {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  background: var(--color-warning-bg, #fdf3e2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-top: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+.merge-notice__close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: inherit; }
+.checkout__pickup-info { background: var(--brand-green-tint, #eaf0e2); border-radius: var(--radius-md); padding: var(--space-3); line-height: 2; }
+
+/* ============================== Back-in-stock + gift wrap (Part 2) */
+.back-in-stock { margin-top: var(--space-3); }
+.back-in-stock__row { display: flex; gap: var(--space-2); }
+.back-in-stock__row input { max-width: 180px; text-align: center; }
+
+/* =====================================================================
+   PART 3 — premium boutique design layer (olive green / gold / ivory).
+   Appended last so it wins over the earlier utility-first styles.
+   ===================================================================== */
+
+body { line-height: var(--line-height-base); background: var(--brand-ivory); }
+
+/* Part R2 typography: one family; headings get weight 800 instead of a
+   decorative display face. */
+h1, h2, h3, .section__head h2 {
+  font-family: var(--font-family-display);
+  font-weight: 800;
+  line-height: var(--line-height-tight);
+  color: var(--brand-green-dark);
+  letter-spacing: 0;
+}
+
+::selection { background: var(--brand-gold); color: var(--brand-green-dark); }
+
+/* Focus visibility (a11y) */
+:focus-visible {
+  outline: 2px solid var(--brand-gold-deep);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* --- Buttons: brand green primary (white text 5.4:1), gold for dark bg --- */
+.btn { border-radius: 10px; font-weight: 600; transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
+.btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn--primary { background: var(--brand-green); color: var(--color-button-text, #fff); border: none; }
+.btn--primary:hover { background: var(--brand-green-mid); }
+.btn--outline { border: 1px solid var(--brand-green); color: var(--brand-green-dark); background: transparent; }
+.btn--outline-light { border: 1px solid rgba(206,180,100,.7); color: var(--brand-gold); background: transparent; }
+.btn--outline-light:hover { background: rgba(206,180,100,.12); }
+.btn--gold { background: var(--brand-gold); color: var(--brand-green-dark); border: none; font-weight: 700; }
+.btn--gold:hover { background: #d9c078; }
+
+/* ============================ HEADER ============================ */
+/* PR 19 — constant-height OUTER box, morphing inner bar.
+   The document layout only ever sees `.site-header` at var(--header-height)
+   on desktop and `.site-header-spacer` (the measured natural height) on
+   phones. Every look change happens INSIDE that constant box, so folding
+   the header can never change the page height, shift scrollY, or feed the
+   browser's scroll anchoring back into Header.jsx. */
+.site-header {
+  position: sticky; top: 0; z-index: 60;
+  isolation: isolate;
+  height: var(--header-height);
+  background: transparent;
+  color: var(--brand-ivory);
+  border: 0;
+  box-shadow: none;
+}
+/* Only takes part in the flow on phones (see the phone block below). */
+.site-header-spacer { display: none; }
+
+.site-header__inner {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: var(--space-4);
+  width: 100%; max-width: none;
+  /* PR 20: exactly the outer box's height, border INCLUDED -- with only
+     min-height the 1px border + tall content made the bar 79px inside
+     the 76px outer and it painted over the page. border-box restated
+     (globals.css already sets it) so this rule is safe in isolation.
+     Padding-block is 10px so the one-row content (44px logo/controls)
+     fits the 76px content box. Phones override `height` back to auto
+     in the S6 block at the end of this file. */
+  box-sizing: border-box;
+  height: var(--header-height);
+  min-height: var(--header-height);
+  margin-inline: auto;
+  /* Full-bleed bar, content aligned to `.container`. */
+  padding-inline: max(var(--space-3), calc((100% - var(--container-max-width)) / 2 + var(--space-3)));
+  padding-block: 10px;
+  border: 1px solid transparent;
+  border-radius: 0;
+  /* The bar owns the solid fill (the contrast audit reads it). The compact
+     pill only swaps this one color to the translucent glass green. */
+  background-color: var(--brand-green-dark);
+  box-shadow: none;
+  /* The outer height is NEVER transitioned; only this inner layer morphs. */
+  transition:
+    width .3s ease-out,
+    max-width .3s ease-out,
+    margin .3s ease-out,
+    padding .3s ease-out,
+    border-radius .3s ease-out,
+    border-color .3s ease-out,
+    background-color .3s ease-out,
+    box-shadow .3s ease-out,
+    min-height .3s ease-out,
+    height .3s ease-out;
+}
+/* The BLUR lives on a pseudo-element that has NO descendants. A
+   backdrop-filter on the header or on the inner itself would become the
+   containing block of their fixed descendants (the mega-menu's viewport
+   overlay) and drag that overlay under the pill. This layer is purely
+   visual, so every real child stays free to use position: fixed. */
+.site-header__inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Desktop: at rest the inner is the familiar full-width dark green bar. Once
+   compact it becomes the floating pill (trustwallet-style) -- width, margin,
+   radius, fill, border and shadow animate; the outer box keeps its 76px. */
+@media (min-width: 768px) {
+  .site-header--compact .site-header__inner {
+    /* PR 20: 80% was too narrow at 1024px -- every label wrapped, the
+       pill grew to 87px and overflowed the 76px outer box. Near-full
+       width (capped like the content) + nowrap labels keeps it one row
+       at 1024/1280/1366, and the exact compact height (12px margin-top
+       + 60px = 72px) always fits the outer box. */
+    width: calc(100% - 32px);
+    max-width: 1160px;
+    height: var(--header-height-compact);
+    min-height: var(--header-height-compact);
+    margin-top: 12px;
+    padding-inline: var(--space-4);
+    padding-block: 4px;
+    border-radius: 16px;
+    border-color: rgba(206,180,100,.35);
+    /* Glass fill: the bar's own color turns translucent; the pseudo layer
+       behind the content blurs whatever shows through it. */
+    background-color: rgba(47,58,24,.88);
+    box-shadow: 0 8px 24px rgba(20,26,10,.25);
+  }
+  .site-header--compact .site-header__inner::before {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+/* Without backdrop-filter the pill falls back to the solid brand green. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .site-header--compact .site-header__inner { background-color: var(--brand-green-dark); }
+}
+
+.site-header__brand { display: flex; align-items: center; gap: var(--space-2); }
+.site-header__logo { height: 44px; width: 44px; transition: height .25s ease; }
+.site-header--compact .site-header__logo { height: 34px; width: 34px; }
+.site-header__brand-name {
+  font-family: var(--font-family-display);
+  font-weight: 800;
+  font-size: var(--font-size-md); color: var(--brand-gold); white-space: nowrap;
+}
+
+.site-header__search { position: relative; flex: 1; display: flex; max-width: 460px; margin-inline: auto; }
+/* PR 21: the field must FILL its container at every width. The form used
+   to be a shrink-to-fit flex child, so the input only ever got its
+   natural size and left a gap on the inline-start side (live: container
+   13..363 but input 135..363 at 375px, 271..796 vs 568..796 at 1024px,
+   658..1082 vs 854..1082 at 1366px). Form and input now grow, and
+   `min-width: 0` lets them shrink inside the pill; the submit button
+   keeps its own size (flex: none). */
+.site-header__search form { display: flex; flex: 1 1 auto; min-width: 0; width: 100%; }
+.site-header__search input {
+  flex: 1 1 auto; min-width: 0; width: 100%;
+  border: 1px solid rgba(206,180,100,.4);
+  border-radius: 0 10px 10px 0; padding: 10px 14px;
+  background: rgba(250,247,240,.08); color: var(--brand-ivory);
+}
+.site-header__search input::placeholder { color: rgba(250,247,240,.55); }
+.site-header__search .btn { flex: none; border-radius: 10px 0 0 10px; padding-inline: 14px; font-size: 1.1rem; }
+
+.search-suggest {
+  position: absolute; inset-inline: 0; top: calc(100% + 6px);
+  background: #fff; color: var(--brand-ink);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+  overflow: hidden; list-style: none; margin: 0; padding: 0; z-index: 70;
+}
+.search-suggest a { display: flex; align-items: center; gap: var(--space-2); padding: 8px 12px; }
+.search-suggest a:hover { background: var(--brand-green-tint); }
+.search-suggest img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
+.search-suggest__noimg { width: 40px; height: 40px; border-radius: 8px; background: var(--brand-green-tint); }
+.search-suggest__name { flex: 1; font-size: var(--font-size-sm); }
+.search-suggest__price { color: var(--brand-gold-deep); font-size: var(--font-size-sm); }
+
+.site-header__nav { display: flex; align-items: center; gap: var(--space-4); }
+/* PR 20: header labels never wrap -- a two-line «دسته‌بندی کالاها» or
+   «علاقه‌مندی‌ها» is what grew the tablet/desktop pill to 87px. The
+   bar and pill have exact heights now, so wrapping would clip. */
+.site-header__nav a { color: var(--brand-ivory); font-size: var(--font-size-sm); padding: 6px 2px; border-bottom: 2px solid transparent; white-space: nowrap; }
+.site-header__nav a:hover, .site-header__nav a.active { color: var(--brand-gold); border-color: var(--brand-gold); }
+
+.site-header__mega-btn {
+  background: rgba(206,180,100,.14); color: var(--brand-gold);
+  border: 1px solid rgba(206,180,100,.4); border-radius: 10px;
+  padding: 8px 14px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  font: inherit;
+  white-space: nowrap;
+}
+.site-header__mega-btn .icon { flex: none; }
+/* PR 20: the 768-1099px range swaps in the short label (tablet block at
+   the end of this file); everywhere else the full one shows. */
+.site-header__mega-label--short { display: none; }
+/* Stage 2 (Digikala-style mega menu): NO physical gap between
+   trigger and panel -- the wrapper's padding-top is the invisible
+   bridge, so moving the pointer "through the gap" never leaves the
+   hover area (a 150 ms open-intent / 200 ms close-grace delay in
+   MegaMenu.jsx covers the rest). */
+/* The trigger stays static so the PANEL positions
+   against the whole HEADER (Digikala-style full-width
+   bar), not against the narrow button. The panel is
+   still a DOM child of the trigger wrapper, so the
+   wrapper's hover area (and the invisible padding
+   bridge below) keeps the menu alive while the
+   pointer crosses the gap. */
+.site-header__mega-trigger { position: static; }
+/* PR 20: the dropdown is independent of the bar/pill it hangs from. It
+   used to span the inner's box with the panel at min(1150px, 94vw)
+   inside -- in pill mode the panel was WIDER than the pill and, RTL
+   auto margins being 0 on overflow, stuck out to the left (off the
+   viewport at 1024px). Now the dropdown owns a viewport-centred width
+   (the pill is centred too, so left:50% of the inner is the viewport
+   centre at rest and in pill mode alike), top: 100% puts its hover
+   bridge at the bar/pill bottom and the panel 8px below it, and the
+   panel simply fills the dropdown -- nothing can stick out. */
+.mega-menu {
+  position: absolute; top: 100%; left: 50%; right: auto;
+  width: min(1160px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  padding-top: 8px;
+  background: transparent; z-index: 65;
+}
+/* Dimmed overlay over the page content BEHIND the panel (below
+   the header itself, which stays bright and usable). */
+.mega-menu__overlay {
+  position: fixed; top: var(--site-header-height, 76px);
+  inset-inline: 0; bottom: 0;
+  background: rgba(20, 26, 10, .35);
+  z-index: 64;
+  animation: fade-in .2s ease-out;
+}
+/* In pill mode the dim starts at the PILL's bottom (12px float margin +
+   the compact height), not the outer box's. */
+.site-header--compact .mega-menu__overlay { top: calc(12px + var(--header-height-compact)); }
+.mega-menu__inner {
+  position: relative; z-index: 65;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
+  background: #fff; color: var(--brand-ink); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg); display: flex; overflow: hidden;
+  /* The panel scrolls on its own -- never the page. */
+  max-height: 70vh;
+  /* Stage 2: fade + 8px slide down on open
+     (mount animation, like the drawers). */
+  animation: mega-menu-in .2s ease-out;
+}
+@keyframes mega-menu-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.mega-menu__roots {
+  list-style: none; margin: 0; padding: var(--space-3);
+  background: var(--brand-green-tint); min-width: 220px;
+  max-height: 70vh; overflow-y: auto;
+}
+.mega-menu__roots button {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: right; background: none; border: none;
+  padding: 9px 10px; border-radius: 8px; cursor: pointer;
+  color: var(--brand-ink); font: inherit; font-size: var(--font-size-md);
+}
+.mega-menu__roots button:hover { background: #fff; color: var(--brand-green-mid); }
+/* The active main category: white chip + gold line on the RIGHT
+   (the side the roots column sits on in RTL). */
+.mega-menu__roots button.is-active {
+  background: #fff; color: var(--brand-green-mid); font-weight: 700;
+  box-shadow: inset -3px 0 0 var(--brand-gold);
+}
+.mega-menu__root-icon { width: 28px; height: 28px; flex: none; display: grid; place-items: center; }
+.mega-menu__root-icon img, .mega-menu__root-icon .img-placeholder { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+.mega-menu__root-icon .icon { color: var(--brand-gold-deep); }
+.mega-menu__root-name { flex: 1; }
+.mega-menu__panel { flex: 1; min-width: 0; max-width: 100%; padding: var(--space-4); overflow-y: auto; max-height: 70vh; }
+.mega-menu__all {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--brand-gold-deep); font-weight: 800;
+  padding: 6px 8px; border-radius: 8px; margin-bottom: var(--space-3);
+}
+.mega-menu__all:hover { background: var(--brand-green-tint); }
+.mega-menu__columns { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); }
+.mega-menu__col { min-width: 160px; }
+.mega-menu__subhead {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 800; color: var(--brand-ink);
+  padding: 6px 8px; border-radius: 8px; margin-bottom: 2px;
+}
+.mega-menu__subhead:hover { background: var(--brand-green-tint); color: var(--brand-green-mid); }
+.mega-menu__col ul { list-style: none; margin: 0; padding: 0; }
+.mega-menu__col a { display: block; padding: 5px 8px; border-radius: 8px; color: var(--brand-ink); font-size: var(--font-size-sm); }
+.mega-menu__col a:hover { background: var(--brand-green-tint); }
+/* Phones show the sheet, desktops the panel (the wrong
+   surface is hidden here, not in JS, so hover handlers
+   stay attached for touch laptops). */
+@media (max-width: 1023px) {
+  .mega-menu, .mega-menu__overlay { display: none; }
+}
+@media (min-width: 1024px) {
+  .mega-sheet { display: none; }
+}
+
+/* --- Mobile category sheet (stage 2) --- */
+.mega-sheet { position: fixed; inset: 0; z-index: 115; height: 100vh; height: 100dvh; }
+.mega-sheet__backdrop { position: absolute; inset: 0; background: rgba(20,26,10,.5); animation: fade-in .25s ease-out; }
+.mega-sheet__panel {
+  position: absolute; top: 0; bottom: 0; inset-inline-start: 0;
+  width: min(320px, 88vw); background: #fff; color: var(--brand-ink);
+  display: flex; flex-direction: column; overflow: hidden;
+  /* Full-height sheet sliding in from the RIGHT (250 ms). */
+  animation: mega-sheet-in .25s ease-out;
+}
+@keyframes mega-sheet-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.mega-sheet__head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.mega-sheet__back, .mega-sheet__close { display: inline-grid; place-items: center; background: none; border: none; cursor: pointer; color: var(--brand-ink); padding: 8px; border-radius: 8px; min-width: 48px; min-height: 48px; }
+.mega-sheet__back { font: inherit; font-size: var(--font-size-md); gap: 4px; grid-template-columns: auto auto; }
+.mega-sheet__title { flex: 1; margin: 0; text-align: center; font-size: var(--font-size-md); }
+.mega-sheet__head-spacer { min-width: 48px; }
+.mega-sheet__all {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px var(--space-3); min-height: 48px;
+  color: var(--brand-gold-deep); font-weight: 700;
+  border-bottom: 1px solid var(--color-border);
+}
+.mega-sheet__all .icon { margin-inline-start: auto; }
+.mega-sheet__list { flex: 1; overflow-y: auto; overscroll-behavior: contain; list-style: none; margin: 0; padding: var(--space-2); }
+.mega-sheet__list li button, .mega-sheet__list li a {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 48px; padding: 10px 12px;
+  border: none; background: none; cursor: pointer;
+  font: inherit; font-size: var(--font-size-md); color: var(--brand-ink);
+  text-align: right; border-radius: 10px;
+}
+.mega-sheet__list li button:hover, .mega-sheet__list li a:hover { background: var(--brand-green-tint); }
+.mega-sheet__icon { width: 28px; height: 28px; flex: none; display: grid; place-items: center; }
+.mega-sheet__icon img, .mega-sheet__icon .img-placeholder { width: 28px; height: 28px; object-fit: contain; border-radius: 6px; }
+.mega-sheet__icon .icon { color: var(--brand-gold-deep); }
+.mega-sheet__chevron { margin-inline-start: auto; color: var(--color-text-muted); }
+/* Drill levels slide in from the forward (left, RTL) side;
+   «بازگشت» slides them back from the right. */
+.mega-sheet__list[data-direction="forward"] { animation: mega-sheet-level-in .22s ease-out; }
+.mega-sheet__list[data-direction="back"] { animation: mega-sheet-level-in-back .22s ease-out; }
+@keyframes mega-sheet-level-in { from { transform: translateX(-30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes mega-sheet-level-in-back { from { transform: translateX(30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+.cart-link { position: relative; background: none; border: none; color: var(--brand-ivory); cursor: pointer; padding: 6px; }
+.cart-link:hover { color: var(--brand-gold); }
+.cart-link__icon { width: 26px; height: 26px; }
+.cart-link__badge {
+  position: absolute; top: -4px; inset-inline-start: -6px;
+  background: var(--brand-gold); color: var(--brand-green-dark);
+  min-width: 20px; height: 20px; border-radius: 10px;
+  display: grid; place-items: center; font-size: 0.72rem; font-weight: 800;
+  animation: badge-pop .3s ease;
+}
+@keyframes badge-pop { 0% { transform: scale(.4); } 70% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+/* The collapsed phone row's search icon: a quiet gold glyph on the dark
+   header, 44px tap target, same family as the cart button next to it. */
+.site-header__search-toggle {
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(250, 247, 240, 0.08);
+  color: var(--brand-ivory);
+  cursor: pointer;
+}
+.site-header__search-toggle:hover { color: var(--brand-gold); }
+.site-header__search-toggle .icon { color: var(--brand-gold); }
+
+/* PR 20: account = user icon + name on wide screens, icon only below
+   1100px and in the phone header's first row (the label spans hide in
+   the tablet/phone blocks at the end of this file). Never wraps. */
+.user-menu__trigger { background: none; border: 1px solid rgba(206,180,100,.4); color: var(--brand-ivory); border-radius: 10px; padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.user-menu__trigger .icon { flex: none; display: block; }
+.site-header__login .icon { flex: none; }
+.user-menu__panel { background: #fff; color: var(--brand-ink); }
+.user-menu__panel a:hover, .user-menu__panel button:hover { background: var(--brand-green-tint); }
+
+.site-header__burger { display: none; background: none; border: none; cursor: pointer; padding: 8px; }
+.site-header__burger span { display: block; width: 22px; height: 2px; background: var(--brand-gold); margin: 5px 0; border-radius: 2px; }
+
+/* Part S5 follow-up 4: full-screen overlays are portaled to <body> and sit
+   above the floating contact cluster while preserving the toaster layer. */
+.site-header__drawer {
+  position: fixed; inset: 0; z-index: 115; height: 100vh; height: 100dvh;
+  pointer-events: none;
+}
+.site-header__drawer-backdrop {
+  position: absolute; inset: 0; background: rgba(20, 26, 10, .56);
+  pointer-events: auto; animation: mobile-drawer-backdrop-in 250ms ease-out both;
+}
+.site-header__drawer-panel {
+  position: absolute; inset-block: 0; right: 0;
+  width: min(380px, 90vw); max-width: 100vw;
+  padding: var(--space-3) var(--space-4);
+  display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--brand-green-dark); color: var(--brand-ivory);
+  pointer-events: auto; animation: mobile-drawer-panel-in 250ms ease-out both;
+}
+@keyframes mobile-drawer-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mobile-drawer-panel-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.site-header__drawer.is-closing .site-header__drawer-backdrop,
+.site-header__drawer.is-closing .site-header__drawer-panel { animation-direction: reverse; }
+.site-header__drawer-head {
+  display: flex; justify-content: flex-start; align-items: center;
+  min-height: 48px; margin-bottom: var(--space-2);
+}
+.site-header__drawer-head button {
+  width: 48px; height: 48px; display: inline-grid; place-items: center;
+  background: none; border: 1px solid rgba(206,180,100,.35);
+  border-radius: 12px; color: var(--brand-gold); cursor: pointer;
+}
+.site-header__drawer-nav, .site-header__drawer-account { display: flex; flex-direction: column; gap: 4px; }
+.site-header__drawer-account {
+  margin-block-start: auto; padding-top: var(--space-3);
+  border-top: 1px solid rgba(206,180,100,.25);
+}
+.site-header__drawer-link {
+  width: 100%; min-height: 48px; display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border: 0; border-radius: 12px;
+  background: transparent; color: var(--brand-ivory); font: inherit;
+  font-size: var(--font-size-md); line-height: 1.5; text-align: right;
+  text-decoration: none; cursor: pointer;
+}
+.site-header__drawer-link > .icon { flex: none; color: var(--brand-gold); }
+.site-header__drawer-link > .icon:last-child:not(:first-child) { margin-inline-start: auto; }
+.site-header__drawer-link:hover,
+.site-header__drawer-link:focus-visible,
+.site-header__drawer-link.is-active {
+  background: rgba(206,180,100,.12); color: var(--brand-gold);
+}
+.site-header__drawer-link.is-active { box-shadow: inset -3px 0 0 var(--brand-gold); font-weight: 700; }
+.site-header__drawer-link:focus-visible { outline: 2px solid var(--brand-gold); outline-offset: 2px; }
+
+/* category bar (pre-Part-3) hidden: replaced by mega menu */
+.category-bar { display: none; }
+
+/* --- Mini cart drawer --- */
+.minicart {
+  position: fixed; inset: 0; z-index: 116; pointer-events: none;
+  height: 100vh;
+  height: 100dvh;
+}
+.minicart__backdrop { position: absolute; inset: 0; background: rgba(20,26,10,.5); pointer-events: auto; }
+/* Part S5 follow-up 4 item 2(a): the drawer inherits the HEADER's ivory text
+   color (it lives inside .site-header), which painted ivory on the white
+   panel -- 1.07:1, invisible. The panel now declares its own dark text color
+   and every price line states its own, so nothing here depends on what the
+   header looks like. Measured by src/styles/contrast.computed.test.jsx. */
+.minicart__panel {
+  position: absolute; top: 0; bottom: 0; inset-inline-start: auto; inset-inline-end: 0;
+  width: min(380px, 92vw); background: #fff; color: var(--brand-ink); pointer-events: auto;
+  box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+  animation: drawer-in .28s ease;
+}
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+[dir="rtl"] .minicart__panel { animation-name: drawer-in-rtl; }
+@keyframes drawer-in-rtl { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.minicart__head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--brand-green-dark); color: var(--brand-gold); }
+/* Like the mobile drawer, the mini-cart is a full overlay. Keep an actual
+   logo-and-name home link inside it so the overlay never hides that action. */
+.minicart__brand { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--brand-gold); font-weight: 800; white-space: nowrap; }
+.minicart__brand img { width: 28px; height: 28px; flex: none; }
+.minicart__head strong { margin-inline: auto; white-space: nowrap; }
+.minicart__head button { background: none; border: none; color: var(--brand-gold); font-size: 1.4rem; cursor: pointer; }
+.minicart__items { list-style: none; margin: 0; padding: var(--space-3); overflow: auto; flex: 1; display: flex; flex-direction: column; gap: var(--space-3); }
+.minicart__items li { display: flex; align-items: center; gap: var(--space-2); border-bottom: 1px dashed var(--color-border); padding-bottom: var(--space-2); }
+.minicart__items img { width: 52px; height: 52px; object-fit: cover; border-radius: 10px; }
+.minicart__noimg { width: 52px; height: 52px; border-radius: 10px; background: var(--brand-green-tint); }
+/* Part S5 follow-up 4 item 3: each row is (image) (name/variant/unit price)
+   (quantity/line total) so the drawer shows the SAME numbers as the cart
+   page: unit price, line total, and a products subtotal below. */
+.minicart__line-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.minicart__line-side { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.minicart__name { flex: 1; font-size: var(--font-size-sm); color: var(--brand-ink); }
+.minicart__unit .price { margin: 0; }
+.minicart__variant { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.minicart__qty { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+.minicart__unit { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.minicart__line-total, .minicart__total-value { color: var(--brand-ink); font-weight: 700; }
+.minicart__subtotal {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-3) var(--space-3) 0; color: var(--brand-ink); font-size: var(--font-size-sm);
+}
+.minicart__empty { padding: var(--space-5); text-align: center; color: var(--color-text-muted); }
+.minicart__foot { padding: var(--space-3); border-top: 1px solid var(--color-border); }
+.minicart__foot .btn { width: 100%; }
+
+/* ============================ HERO ============================ */
+.hero { position: relative; overflow: hidden; background: var(--brand-green-dark); }
+.hero__track { display: flex; transition: transform .6s cubic-bezier(.22,.8,.32,1); }
+[dir="rtl"] .hero__track { flex-direction: row-reverse; }
+.hero__slide { position: relative; min-width: 100%; height: clamp(300px, 52vw, 520px); }
+.hero__slide img { width: 100%; height: 100%; object-fit: cover; opacity: .8; }
+.hero__overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(24,30,12,.85), rgba(24,30,12,.15) 60%); display: flex; align-items: flex-end; }
+.hero__copy { padding-bottom: var(--space-6); }
+.hero__copy h2 { color: var(--brand-ivory); font-size: var(--font-size-2xl); margin: 0 0 var(--space-2); text-shadow: 0 2px 18px rgba(0,0,0,.45); }
+.hero__copy p { color: var(--brand-gold); font-size: var(--font-size-md); margin: 0 0 var(--space-3); }
+.hero__arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(24,30,12,.45); color: var(--brand-gold); border: 1px solid rgba(206,180,100,.5);
+  width: 42px; height: 42px; border-radius: 50%; font-size: 1.4rem; cursor: pointer;
+}
+.hero__arrow--prev { inset-inline-start: 14px; }
+.hero__arrow--next { inset-inline-end: 14px; }
+.hero__dots { position: absolute; bottom: 14px; inset-inline: 0; display: flex; justify-content: center; gap: 8px; }
+.hero__dots button { width: 10px; height: 10px; border-radius: 50%; border: none; background: rgba(250,247,240,.45); cursor: pointer; }
+.hero__dots button.is-active { background: var(--brand-gold); transform: scale(1.25); }
+.hero--skeleton { height: clamp(300px, 52vw, 520px); }
+
+/* --- Trust strip --- */
+.trust-strip { background: var(--brand-green-tint); border-block: var(--hairline); }
+.trust-strip__inner {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch; gap: var(--space-2); padding-block: var(--space-3);
+}
+.trust-strip__item {
+  min-width: 0; display: flex; align-items: center; justify-content: center;
+  gap: var(--space-2); padding-inline: 6px;
+  font-size: var(--font-size-sm); line-height: 1.7; color: var(--brand-green-dark); font-weight: 600;
+}
+.trust-strip__item .icon { flex: none; color: var(--brand-gold-deep); }
+.trust-strip__item span { min-width: 0; }
+@media (max-width: 767px) {
+  .trust-strip__inner {
+    display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 0;
+    overflow-x: auto; overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .trust-strip__item {
+    flex: 0 0 100%; width: 100%; justify-content: flex-start;
+    scroll-snap-align: start; padding: 6px 12px;
+  }
+}
+
+/* --- Sections --- */
+.section { margin-block: var(--space-6); }
+.section__head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+.section__head h2 { font-size: var(--font-size-xl); margin: 0; }
+.section__head a { margin-inline-start: auto; color: var(--brand-gold-deep); font-size: var(--font-size-sm); }
+.section__rule { flex: 1; height: 1px; background: linear-gradient(to left, transparent, rgba(206,180,100,.6)); }
+
+
+/* --- Category tiles --- */
+.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+.category-card {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden;
+  aspect-ratio: 1; background: var(--brand-green-tint);
+  border: 1px solid var(--color-border); transition: transform .2s ease, box-shadow .2s ease;
+}
+.category-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.category-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Part S4 item 1: a category without an image shows the shared placeholder
+   (same warm-grey field + brand mark as everywhere else) in the tile area. */
+.category-card .img-placeholder { position: absolute; inset: 0; }
+.category-card__name {
+  position: absolute; inset-inline: 0; bottom: 0; text-align: center;
+  background: linear-gradient(to top, rgba(24,30,12,.85), transparent);
+  color: var(--brand-ivory); padding: var(--space-4) 0 var(--space-2);
+  font-weight: 700; font-size: var(--font-size-md);
+}
+
+/* --- Product cards --- */
+.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--space-4); }
+.product-card {
+  background: #fff; border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);
+  transition: transform .22s ease, box-shadow .22s ease;
+  display: flex; flex-direction: column;
+}
+.product-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+.product-card__media { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: #fff; }
+.product-card__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity .35s ease, transform .5s ease; }
+.product-card__img--alt { opacity: 0; }
+.product-card:hover .product-card__img--alt { opacity: 1; }
+.product-card:hover .product-card__img--main { transform: scale(1.04); }
+.product-card__placeholder { position: absolute; inset: 0; display: grid; place-items: center; background: var(--brand-green-tint); }
+.product-card__placeholder-logo { width: 56px; opacity: .35; }
+.product-card__badges { position: absolute; top: 10px; inset-inline-start: 10px; display: flex; flex-direction: column; gap: 6px; }
+.badge { border-radius: 8px; padding: 3px 9px; font-size: var(--font-size-xs); font-weight: 700; }
+.badge--new { background: var(--brand-green); color: #fff; }
+.badge--sale { background: var(--brand-gold); color: var(--brand-green-dark); }
+.badge--low { background: #fff; color: var(--color-warning); border: 1px solid var(--color-warning); }
+.badge--oos { background: #3b3b3b; color: #fff; }
+.product-card__quick-add {
+  position: absolute; bottom: 12px; inset-inline-end: 12px;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--brand-green-dark); color: var(--brand-gold);
+  border: 1px solid rgba(206,180,100,.6); font-size: 1.4rem; cursor: pointer;
+  opacity: 0; transform: translateY(8px); transition: all .22s ease;
+}
+.product-card:hover .product-card__quick-add, .product-card__quick-add:focus-visible { opacity: 1; transform: none; }
+.product-card__body { padding: var(--space-3); display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.product-card__name { color: var(--brand-ink); font-size: var(--font-size-sm); line-height: 1.8; min-height: 3.5em; }
+.product-card__brand { color: var(--color-text-muted); font-size: var(--font-size-xs); }
+.product-card__footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.product-card--oos .product-card__img { filter: grayscale(.6); opacity: .8; }
+.price__current { color: var(--brand-green-dark); font-weight: 800; }
+.price__compare { color: var(--color-text-muted); }
+.price__badge { background: var(--brand-gold); color: var(--brand-green-dark); border-radius: 8px; padding: 1px 8px; font-size: var(--font-size-xs); }
+
+/* --- Daily deal (پیشنهاد امروز) --- */
+.section--dark { background: var(--brand-green-dark); padding-block: var(--space-5); margin-block: var(--space-6); }
+.section--dark h2 { color: var(--brand-gold); }
+.section--dark .section__rule { background: linear-gradient(to left, transparent, rgba(206,180,100,.5)); }
+.deals-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); max-width: 860px; margin-inline: auto; }
+.deal-card { background: #fff; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid rgba(206,180,100,.5); display: flex; flex-direction: row; align-items: stretch; gap: 0; padding: 0; min-height: 340px; box-shadow: var(--shadow-sm); }
+.deal-card__media { flex: 0 0 60%; background: #fff; position: relative; aspect-ratio: 1 / 1; display: block; overflow: hidden; }
+.deal-card__media picture { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.deal-card__media img { display: block; width: 100%; height: 100%; object-fit: contain; border-radius: 0; }
+.deal-card__media .img-placeholder { position: absolute; inset: 0; aspect-ratio: auto; }
+.deal-card__badge { position: absolute; top: 12px; inset-inline-start: 12px; background: var(--brand-gold); color: var(--brand-green-dark); font-weight: 800; font-size: var(--font-size-sm); padding: 4px 10px; border-radius: 999px; }
+.deal-card__body { flex: 1; min-width: 0; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); justify-content: center; }
+.deal-card__name { color: var(--brand-ink); font-weight: 800; font-size: var(--font-size-lg); line-height: 1.7; margin: 0; overflow-wrap: anywhere; }
+.deal-card__prices { display: flex; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.deal-card__sale { color: var(--brand-gold-deep); font-weight: 800; font-size: var(--font-size-lg); }
+.deal-card__regular { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-inline-start: 0; }
+.deal-card__cta { margin-top: var(--space-2); align-self: flex-start; background: var(--brand-green-dark); color: var(--brand-gold); padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: var(--font-size-sm); }
+/* PR 20: a countdown reads like a CLOCK -- hours on the LEFT, then
+   minutes, then seconds on the right, ":" between them -- so the row
+   runs LTR even inside the RTL page. The digits stay Persian and each
+   Persian label sits under its own number (DOM order in Home.jsx is
+   already hours -> minutes -> seconds; the flex row follows the new
+   direction). The aria-label stays Persian («زمان باقی‌مانده»). */
+.countdown { direction: ltr; display: inline-flex; align-items: center; gap: 6px; font-weight: 800; color: var(--brand-green-dark); background: var(--brand-green-tint); border: var(--hairline); border-radius: 10px; padding: 6px 12px; width: max-content; font-variant-numeric: tabular-nums; }
+.countdown__segment { display: inline-flex; flex-direction: column; align-items: center; min-width: 44px; gap: 1px; }
+.countdown__value { font-variant-numeric: tabular-nums; font-size: var(--font-size-md); line-height: 1; min-width: 2ch; text-align: center; }
+.countdown__label { font-size: 10px; font-weight: 600; color: var(--color-text-muted); line-height: 1; }
+.countdown__sep { font-weight: 800; color: var(--brand-green-dark); padding-inline: 1px; }
+.countdown.is-over { background: #fdecea; color: var(--color-danger); border-color: #f5c6c0; }
+
+/* ---------- Desktop daily deals: coverflow (>=1024px) --------------------
+   The current deal is the large card in the CENTRE; the previous/next deals
+   sit behind it on the right/left -- smaller (scale .8), partly hidden
+   behind the centre card, dimmed (opacity .45) and softly blurred. Up to
+   two more deals stack further out on each side, even smaller and fainter.
+   Every card is absolutely positioned in a FIXED-height stage and moves
+   with transform/opacity/filter only, so a rotation is ONE continuous
+   ~600ms ease-in-out interpolation: the chosen side card slides to the
+   centre, grows, sharpens and comes to the front while the old centre card
+   shrinks, fades and moves back to the other side. Nothing re-mounts and
+   nothing shifts the page.
+   RTL: the next deal (positive offset) is drawn on the LEFT, the previous
+   one on the RIGHT, so picking the right-hand card moves the set left. */
+.deals-desktop { position: relative; width: 100%; }
+.deals-cf {
+  --deals-cf-height: clamp(350px, 29vw, 430px);
+  --deals-cf-card-width: clamp(330px, 44%, 560px);
+  position: relative;
+  width: 100%;
+}
+.deals-cf__stage {
+  position: relative;
+  width: 100%;
+  height: var(--deals-cf-height);
+}
+.deals-cf__card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--deals-cf-card-width);
+  height: 100%;
+  transform: translate(-50%, -50%) translateX(calc(var(--cf-dx, 0) * 1%)) scale(var(--cf-scale, 1));
+  transform-origin: center center;
+  transition: transform 600ms ease-in-out, opacity 600ms ease-in-out, filter 600ms ease-in-out;
+  opacity: var(--cf-opacity, 1);
+  filter: blur(var(--cf-blur, 0px));
+  will-change: transform, opacity, filter;
+}
+.deals-cf__card .deal-card { width: 100%; height: 100%; min-height: 0; }
+.deals-cf__card.is-side .deal-card { cursor: pointer; }
+.deals-cf__card.is-hidden { pointer-events: none; }
+.deals-cf__card:focus-within { outline: 2px solid var(--brand-gold); outline-offset: 4px; border-radius: var(--radius-lg); }
+
+/* The centre card's text (name, prices, badge, countdown, CTA) fades in
+   AFTER the card has arrived -- it never pops in mid-flight. */
+.deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__name,
+.deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__prices,
+.deals-cf__stage.is-rotating .deals-cf__card.is-centre .countdown,
+.deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__cta,
+.deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__badge {
+  animation: deals-cf-text-in 240ms ease-out 400ms both;
+}
+@keyframes deals-cf-text-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Round arrows: «قبلی» on the inline-start (right in RTL), «بعدی» on the
+   inline-end -- matching the side the cards come from. */
+.deals-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(206,180,100,.6);
+  background: rgba(30,36,18,.85);
+  color: var(--brand-gold);
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+  flex: none;
+}
+.deals-arrow--prev { inset-inline-start: 0; }
+.deals-arrow--next { inset-inline-end: 0; }
+.deals-arrow:hover { background: var(--brand-gold); color: var(--brand-green-dark); transform: translateY(-50%) scale(1.08); }
+.deals-arrow:focus-visible { outline: 2px solid var(--brand-gold); outline-offset: 3px; }
+
+/* Tablet (768-1023px): no coverflow -- just the current card, in flow. */
+@media (max-width: 1023px) {
+  .deals-cf__stage { height: auto; }
+  .deals-cf__card {
+    position: static;
+    width: 100%;
+    height: auto;
+    transform: none;
+    opacity: 1;
+    filter: none;
+    transition: none;
+  }
+  .deals-cf__card.is-side { display: none; }
+  .deals-arrow { display: none; }
+}
+
+/* Reduced motion: the set switches instantly and the text never hides. */
+@media (prefers-reduced-motion: reduce) {
+  .deals-cf__card { transition: none; }
+  .deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__name,
+  .deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__prices,
+  .deals-cf__stage.is-rotating .deals-cf__card.is-centre .countdown,
+  .deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__cta,
+  .deals-cf__stage.is-rotating .deals-cf__card.is-centre .deal-card__badge {
+    animation: none;
+  }
+}
+
+/* Phone daily deals: full-width colored band with shared countdown + swipeable compact deal cards with scroll-snap */
+.deals-mobile {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-inline-start: -50vw;
+  margin-inline-end: -50vw;
+  background: var(--brand-green-dark);
+  padding: var(--space-2) 0 var(--space-4);
+}
+.deals-mobile__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-inline: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.deals-mobile__title {
+  color: var(--brand-gold);
+  font-weight: 800;
+  font-size: var(--font-size-md);
+}
+.deals-mobile__head-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.deals-mobile__all {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  min-height: 32px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(206,180,100,.55);
+  color: var(--brand-gold);
+  font-weight: 700;
+  font-size: .78rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.deals-mobile__all:hover, .deals-mobile__all:focus-visible { background: rgba(206,180,100,.16); }
+.deals-mobile__track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-inline: var(--space-3);
+  scrollbar-width: none;
+}
+.deals-mobile__track::-webkit-scrollbar {
+  display: none;
+}
+.deals-mobile__card {
+  scroll-snap-align: start;
+  /* ~45vw: a little over two cards peeking, Digikala-style. */
+  flex: 0 0 45vw;
+  max-width: none;
+  background: #fff;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(206,180,100,.45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(20,26,10,.18);
+  color: inherit;
+  text-decoration: none;
+}
+.deals-mobile__media {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  background: #fff;
+}
+.deals-mobile__media img, .deals-mobile__media .img-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.deals-mobile__body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.deals-mobile__name {
+  color: var(--brand-ink);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.deals-mobile__prices {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+/* PR 20: on phones the band's own header carries «پیشنهاد امروز» (next to
+   «مشاهده همه» and the timer), so the section's h2 above it would print
+   the title twice. Hide the section head on phones only -- the section
+   keeps its aria-label, and desktop/tablet keep the h2. */
+@media (max-width: 767px) {
+  .section--dark .section__head { display: none; }
+}
+
+@media (max-width: 767px) {
+  .deal-card { flex-direction: column; min-height: 0; }
+  .deal-card__media { flex: none; width: 100%; aspect-ratio: 1 / 1; }
+  .deal-card__body { padding: var(--space-3); }
+  .deal-card__name { font-size: var(--font-size-md); }
+}
+
+/* --- Review highlights & story --- */
+.review-highlights { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-4); }
+.review-highlight {
+  background: #fff; border-radius: var(--radius-lg); border: 1px solid var(--color-border);
+  border-top: 3px solid var(--brand-gold); padding: var(--space-4); margin: 0;
+}
+.review-highlight p { margin: 0 0 var(--space-3); line-height: 2; }
+.review-highlight cite { color: var(--color-text-muted); font-style: normal; font-size: var(--font-size-sm); }
+.review-highlight__stars { color: var(--brand-gold-deep); margin-inline-end: var(--space-2); }
+.section--story { background: var(--brand-green-tint); border-block: var(--hairline); padding-block: var(--space-6); }
+.section--story__inner { text-align: center; max-width: 720px; }
+.section--story__logo { height: 72px; margin-inline: auto; }
+
+/* --- Footer redesign --- */
+.site-footer { background: var(--brand-green-dark); color: var(--brand-ivory); margin-top: var(--space-7); border-top: 3px solid var(--brand-gold); }
+.site-footer h3, .site-footer h4 { color: var(--brand-gold); font-weight: 800; }
+.site-footer a:hover { color: var(--brand-gold); }
+.site-footer__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-5); padding-block: var(--space-6); }
+.site-footer__bottom { border-top: 1px solid rgba(206,180,100,.25); padding-block: var(--space-3); font-size: var(--font-size-sm); color: rgba(250,247,240,.75); }
+.site-footer__enamad { border-color: rgba(206,180,100,.5); }
+
+/* --- Toasts --- */
+.toaster { position: fixed; bottom: 18px; inset-inline: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 120; pointer-events: none; }
+.toast {
+  background: var(--brand-green-dark); color: var(--brand-ivory);
+  border: 1px solid rgba(206,180,100,.6); border-radius: 12px;
+  padding: 10px 22px; box-shadow: var(--shadow-lg); font-size: var(--font-size-sm);
+  animation: toast-in .3s ease;
+}
+.toast--error { border-color: var(--color-danger); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* --- Reveal & skeletons & reduced motion --- */
+/* Part R1: the hidden state exists ONLY when JS has initialized the reveal
+   observer (html.js-reveal), so no-JS, reduced-motion and late-mount bugs can
+   never leave content invisible. useReveal also reveals after a 1.5 s
+   fail-safe. */
+html.js-reveal .reveal { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
+html.js-reveal .reveal.is-revealed, .reveal.is-revealed { opacity: 1; transform: none; }
+.skeleton { background: linear-gradient(90deg, #eceadf 25%, #f7f5ec 50%, #eceadf 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--radius-md); }
+@keyframes shimmer { to { background-position: -200% 0; } }
+.skeleton--line { height: 14px; margin: 6px var(--space-3); }
+
+/* --- Floating contact (from SiteSettings) --- */
+.floating-contact { position: fixed; bottom: 18px; inset-inline-end: 18px; z-index: 110; display: flex; flex-direction: column; gap: 10px; }
+.floating-contact a {
+  width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--brand-green-dark); color: var(--brand-gold);
+  border: 1px solid rgba(206,180,100,.6); box-shadow: var(--shadow-md); font-size: 1.2rem;
+}
+.floating-contact a:hover { transform: translateY(-2px); }
+.floating-contact__toggle { display: none; }
+@media (max-width: 767px) {
+  .floating-contact { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); inset-inline-end: 14px; inset-inline-start: auto; gap: 8px; }
+  .floating-contact a,
+  .floating-contact__toggle,
+  .floating-contact .back-to-top { width: 44px; height: 44px; }
+  .floating-contact__toggle { display: grid; place-items: center; border-radius: 50%; background: var(--brand-green-dark); color: var(--brand-gold); border: 1px solid rgba(206,180,100,.6); box-shadow: var(--shadow-md); }
+  .floating-contact:not(.floating-contact--expanded) > a { display: none; }
+  .floating-contact--expanded > a { display: grid; }
+}
+
+/* --- 404 restyle --- */
+.notfound { text-align: center; padding: var(--space-7) 0; }
+.notfound h1 { font-size: 4rem; color: var(--brand-gold-deep); margin: 0; }
+
+@media (max-width: 900px) {
+  .site-header__nav, .site-header__search form .btn { display: none; }
+  .site-header__burger { display: block; }
+  .site-header__search { max-width: none; }
+  .hero__copy h2 { font-size: var(--font-size-xl); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+  html.js-reveal .reveal, .reveal { opacity: 1; transform: none; transition: none; }
+  .hero__track { transition: none; }
+}
+
+/* --- route transition fade ---
+   Keep this opacity-only: .route-fade sits above pages that can contain fixed
+   controls, and a transform here would turn it into their containing block. */
+.route-fade { position: relative; animation: route-in .2s ease; }
+@keyframes route-in { from { opacity: 0; top: 8px; } to { opacity: 1; top: 0; } }
+
+/* SmartImage wrappers fill their boxes like plain <img> did */
+.hero__slide picture, .hero__slide picture img { width: 100%; height: 100%; object-fit: cover; }
+.product-card__media picture { position: absolute; inset: 0; }
+.product-card__media picture img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* --- product page Part 3 --- */
+.product-detail__stickybar {
+  position: fixed; bottom: 0; inset-inline: 0; z-index: 80;
+  display: none; gap: var(--space-3); align-items: center; justify-content: space-between;
+  background: #fff; border-top: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-4); box-shadow: 0 -6px 22px rgba(30,36,18,.12);
+}
+@media (max-width: 768px) {
+  .product-detail__stickybar { display: flex; }
+  .product-detail { padding-bottom: 84px; }
+}
+
+/* ============================ PART R1 ============================
+   Image placeholder (owner's brand mark via CSS mask -- the SVG file in
+   public/brand/ is used as-is, never modified) + per-context sizing so
+   the placeholder always occupies exactly the IMAGE AREA of the real
+   image (no layout shift). */
+.img-placeholder {
+  position: relative; display: grid; place-items: center;
+  width: 100%; height: 100%; background: #efece4; /* light warm grey */
+}
+.img-placeholder__mark {
+  width: 46%; height: 46%;
+  background: var(--brand-green); opacity: .35;
+  -webkit-mask: url("/brand/mark.svg") no-repeat center / contain;
+  mask: url("/brand/mark.svg") no-repeat center / contain;
+}
+.product-card__media .img-placeholder,
+.hero__slide .img-placeholder { position: absolute; inset: 0; }
+.cart-item .img-placeholder { width: 90px; height: 90px; border-radius: var(--radius-sm); flex: none; }
+.minicart__items .img-placeholder { width: 52px; height: 52px; border-radius: 10px; flex: none; }
+.search-suggest .img-placeholder { width: 40px; height: 40px; border-radius: 8px; flex: none; }
+/* deal placeholder sized by .deal-card__media rule above */
+.related-card .img-placeholder { height: 130px; }
+.product-detail__main-image .img-placeholder { height: 420px; border-radius: var(--radius-md); border: 1px solid var(--color-border); }
+.thumb .img-placeholder { width: 100%; height: 100%; }
+.order-detail__itemline { display: flex; gap: 10px; align-items: flex-start; }
+.order-detail__itemline .img-placeholder { width: 44px; height: 44px; border-radius: 8px; flex: none; }
+.order-detail__itemline picture img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; flex: none; }
+
+/* ============================ PART R2 ============================
+   Minimal elements: inline SVG icon set, SVG star ratings, one-typeface
+   typography, translucent scrolled header (defined above) and featured
+   brand tiles. Hairlines and whitespace carry the decoration -- no emoji. */
+
+/* icons sit centered inside their buttons/links */
+.btn .icon, .icon-btn .icon, .qty-picker button .icon, .hero__arrow .icon,
+.site-header__mega-btn .icon, .merge-notice__close .icon,
+.minicart__head button .icon, .site-header__drawer-head button .icon,
+.floating-contact a .icon, .trust-strip__item .icon, .rating-input button .icon {
+  display: block;
+}
+.site-header__mega-btn { display: inline-flex; align-items: center; gap: 6px; }
+.qty-picker button, .hero__arrow, .icon-btn, .merge-notice__close,
+.minicart__head button, .site-header__drawer-head button { display: inline-grid; place-items: center; }
+.floating-contact a { font-size: 0; } /* size comes from the SVG icon */
+.trust-strip__item .icon { color: var(--brand-gold-deep); }
+
+/* SVG star ratings (stars are icons, never text glyphs) */
+.stars { display: inline-flex; gap: 2px; }
+.stars__star { position: relative; display: inline-grid; }
+.stars__base { color: #cfc9bd; }
+.stars__fill { position: absolute; top: 0; inset-inline-start: 0; width: var(--fill, 0%); height: 100%; overflow: hidden; color: var(--brand-gold-deep); }
+.stars__fill svg { position: absolute; top: 0; inset-inline-start: 0; }
+.rating-input button { color: #cfc9bd; }
+
+/* bold tabular Persian digits for prices & quantities */
+.price__current, .deal-card__sale, .cart-link__badge, .minicart__qty,
+.minicart__price, .countdown, .order-detail__totals dd, .cart-item__unit,
+.qty-picker span { font-variant-numeric: tabular-nums; }
+
+/* featured brand tiles (home) */
+.brand-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4); }
+.brand-tile {
+  border-radius: var(--radius-lg); overflow: hidden;
+  border: 1px solid var(--color-border); background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s ease, box-shadow .2s ease;
+  display: flex; flex-direction: column;
+}
+.brand-tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.brand-tile__media { position: relative; aspect-ratio: 16/10; background: var(--brand-green-tint); overflow: hidden; display: block; }
+.brand-tile__media picture, .brand-tile__media picture img { width: 100%; height: 100%; object-fit: cover; transition: transform .45s ease; }
+.brand-tile:hover .brand-tile__media picture img { transform: scale(1.06); }
+.brand-tile__media .img-placeholder { position: absolute; inset: 0; }
+/* Brand with a logo but no tile image: the logo sits on a tinted field. */
+.brand-tile__media--tinted { background: linear-gradient(160deg, var(--brand-green-tint), #dfe7cc); }
+.brand-tile__media--tinted picture img { object-fit: contain; padding: var(--space-5); }
+.brand-tile__name {
+  padding: var(--space-3); text-align: center; font-weight: 700;
+  color: var(--brand-green-dark); border-top: var(--hairline);
+  background: #fff;
+}
+
+/* active filter chips on /shop/ */
+.shop__chips { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.shop__chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--brand-green-tint); color: var(--brand-green-dark);
+  border: var(--hairline); border-radius: 999px; padding: 3px 12px;
+  font-size: var(--font-size-sm); font-weight: 600;
+}
+.shop__chip button { background: none; border: none; cursor: pointer; color: var(--brand-gold-deep); display: inline-grid; place-items: center; }
+
+/* ==========================================================================
+   PART R3 — error boundary, API error state, address city combo
+   ========================================================================== */
+
+.error-boundary { max-width: 30rem; margin: 5rem auto; padding: 2rem; text-align: center; }
+.error-boundary h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: var(--space-3); }
+.error-boundary p { color: var(--brand-muted, #5F6552); margin-bottom: var(--space-4); line-height: 1.9; }
+.error-boundary__actions { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
+
+.empty-state--error .empty-state__title { color: var(--brand-green-dark, #263012); }
+.empty-state--error .btn { margin-top: var(--space-3); }
+
+.field__city-combo { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* ==========================================================================
+   PART S1 — mobile layout + centering audit fixes (owner-reported)
+   Audited at 320 / 360 / 375 / 390 / 412 / 768 px. Goals: no horizontal
+   scroll, tap targets >= 44px, readable text (>= 14px body, inputs 16px
+   under 640px so iOS does not zoom), nothing hidden behind sticky/floating
+   bars, safe-area insets, keyboard does not hide the focused field, and
+   vertically centered control content (Persian glyphs in Vazirmatn sit low,
+   so line-height 1.6 inside flex controls pushes text off-center).
+   ========================================================================== */
+
+/* --- 1. horizontal scroll guard -----------------------------------------
+   `clip` (not `hidden`) does not create a scroll container, so
+   position: sticky keeps working in every browser that ships clip. */
+html { overflow-x: clip; }
+
+/* Anchor jumps (checkout sections, review anchor, etc.) must clear the
+   header, including when the on-screen keyboard reflows the page. The live
+   measured height wins on phones, where the header is fixed and its bar is
+   taller than the desktop token. */
+[id] { scroll-margin-top: calc(var(--site-header-height, var(--header-height, 72px)) + 16px); }
+
+/* --- 2. centering: controls ----------------------------------------------
+   Buttons/chips/pagination carry flex centering + a tight line-height so
+   Persian glyphs land on the visual middle of the control. */
+.btn { line-height: 1.2; }
+.chip,
+.pagination button,
+.account__nav a,
+.category-bar__inner a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+}
+.pagination button { min-height: 40px; }
+.chip { min-height: 36px; }
+.qty-picker button,
+.hero__arrow,
+.icon-btn,
+.merge-notice__close,
+.minicart__head button,
+.site-header__drawer-head button,
+.site-header__burger { display: inline-grid; place-items: center; }
+.site-header__burger { width: 44px; height: 44px; }
+.site-header__mega-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+/* Tiny icon-only controls (dots, chip remove, drawer close) keep their
+   small visual size but grow their hit area to 44x44 via a pseudo element. */
+.hero__dots button,
+.dot,
+.shop__chip button,
+.merge-notice__close,
+.minicart__head button,
+.site-header__drawer-head button {
+  position: relative;
+}
+.hero__dots button::after,
+.dot::after,
+.shop__chip button::after,
+.merge-notice__close::after,
+.minicart__head button::after,
+.site-header__drawer-head button::after {
+  content: "";
+  position: absolute;
+  inset: -14px;
+}
+
+/* --- 3. safe-area + fixed-bar clearance ---------------------------------- */
+.product-detail__stickybar {
+  padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+}
+.floating-contact { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 900px) {
+  /* the floating contact button must never cover page content near the
+     bottom of the page (footer / summary buttons) */
+  .site-footer { padding-bottom: 96px; }
+  .checkout, .cart-page { padding-bottom: 80px; }
+}
+
+/* --- 4. touch / small-screen pass ---------------------------------------- */
+@media (max-width: 900px) {
+  .site-header__nav a { padding: 10px 4px; }
+  .user-menu__trigger { padding: 10px 14px; }
+  .user-menu__panel a, .user-menu__panel button { padding: 12px; }
+  .search-suggest a { padding: 12px; }
+  .mega-menu__roots button { padding: 12px 10px; }
+  .mega-menu__panel a { padding: 10px 8px; }
+  .site-header__drawer-link { padding: 14px 12px; }
+  .account__nav a { padding: 12px; }
+  .link, .link-danger { padding-block: 10px; }
+  .category-bar__inner a { min-height: 44px; }
+}
+
+@media (pointer: coarse), (max-width: 900px) {
+  .icon-btn { width: 44px; height: 44px; }
+  .qty-picker button { width: 44px; min-height: 44px; }
+  .hero__arrow { width: 44px; height: 44px; }
+  .pagination button { min-height: 44px; padding-inline: 18px; }
+  .chip { min-height: 44px; padding-inline: 18px; }
+  .btn--sm { font-size: 0.875rem; padding: 10px 16px; }
+}
+
+/* Inputs need 16px under 640px or iOS Safari zooms the page on focus. */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+  body { font-size: 0.9375rem; } /* 15px base keeps everything >= 14px */
+}
+
+/* Inline field errors + required marker (AddressForm S1.3) */
+.field__error { color: var(--color-danger); font-size: var(--font-size-sm); margin-top: 2px; }
+.field__required { color: var(--color-danger); }
+.field--error input, .field--error select, .field--error textarea,
+input.is-invalid, select.is-invalid, textarea.is-invalid { border-color: var(--color-danger); }
+
+/* Guest cart skeleton rows (CartPage S1.2) */
+.cart-item--skeleton { display: flex; gap: var(--space-3); align-items: center; }
+.cart-item--skeleton .skeleton { flex: none; }
+
+/* ==========================================================================
+   PART S2 — forms, feedback, navigation & discovery, a11y additions
+   ========================================================================== */
+
+/* --- Breadcrumbs (item 7) --- */
+.breadcrumbs { margin: var(--space-2) 0 var(--space-3); font-size: var(--font-size-sm); }
+.breadcrumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.breadcrumbs li { display: inline-flex; align-items: center; gap: 4px; color: var(--color-text-muted); }
+.breadcrumbs li + li::before { content: "‹"; color: var(--brand-gold-deep); transform: scaleX(-1); }
+.breadcrumbs a:hover { color: var(--brand-gold-deep); }
+.breadcrumbs [aria-current="page"] { color: var(--brand-green-dark); font-weight: 700; }
+/* inside the PDP grid the trail spans both columns */
+.product-detail > .breadcrumbs { grid-column: 1 / -1; margin-top: 0; }
+
+/* --- Shop toolbar: result count (item 7) --- */
+.shop__count {
+  margin-inline-start: auto; color: var(--color-text-muted);
+  font-size: var(--font-size-sm); font-weight: 600;
+  display: inline-flex; align-items: center;
+}
+.shop__toolbar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+/* --- Checkout progress steps (item 6) --- */
+.checkout__steps {
+  display: flex; flex-wrap: wrap; gap: var(--space-2);
+  list-style: none; margin: 0 0 var(--space-4); padding: 0;
+}
+.checkout__step {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  border: 1px solid var(--color-border); border-radius: 999px;
+  padding: 6px 14px; font-size: var(--font-size-sm); color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+.checkout__step-link {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  text-decoration: none; color: inherit;
+}
+.checkout__step-static {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+}
+.checkout__step-separator {
+  margin-inline-start: var(--space-1);
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+.checkout__step-num {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  font-size: 0.75rem; font-weight: 700;
+}
+.checkout__step--done { color: var(--brand-green-dark); border-color: rgba(138,164,90,.5); }
+.checkout__step--done .checkout__step-num { background: var(--brand-green-tint); color: var(--brand-green-dark); border-color: transparent; }
+.checkout__step--current { color: var(--brand-green-dark); font-weight: 700; border-color: var(--brand-gold-deep); }
+.checkout__step--current .checkout__step-num { background: var(--brand-gold-deep); color: #fff; border-color: transparent; }
+
+/* Big shipping cards for Step 2 */
+.shipping-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-block: 16px;
+}
+.shipping-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.shipping-card:hover {
+  border-color: var(--brand-gold);
+}
+.shipping-card--active {
+  border-color: var(--brand-gold-deep);
+  background: var(--brand-green-tint);
+  box-shadow: 0 4px 12px rgba(90, 105, 50, 0.12);
+}
+.shipping-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.shipping-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--brand-ivory);
+  color: var(--brand-green-dark);
+}
+.shipping-card--active .shipping-card__icon {
+  background: #fff;
+}
+.shipping-card__title-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.shipping-card__title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+.shipping-card__cost {
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  color: var(--brand-green-dark);
+}
+.shipping-card__body {
+  margin-top: 12px;
+  font-size: var(--font-size-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.shipping-card__desc {
+  margin: 0;
+  color: var(--brand-ink);
+}
+.shipping-card__time {
+  margin: 0;
+}
+.shipping-card__free-hint {
+  margin: 0;
+  color: var(--brand-gold-deep);
+}
+
+/* Step 4 review blocks */
+.checkout__review-block {
+  margin-bottom: 16px;
+  padding: 16px;
+  border-radius: 12px;
+}
+.checkout__review-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 8px;
+}
+.checkout__review-block-head h3 {
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+.checkout__review-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.checkout__review-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-light, #eee);
+}
+.checkout__review-item:last-child {
+  border-bottom: 0;
+}
+.checkout__review-item-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.checkout__review-item-name {
+  font-weight: 600;
+}
+.checkout__review-item-qty {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+.checkout__review-item-price {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.checkout__review-cost {
+  font-weight: 600;
+  margin-top: 4px;
+  display: block;
+}
+.checkout__express-warning {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-danger, #d32f2f);
+  margin-top: 4px;
+}
+.address-card--disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sticky invoice summary column on desktop */
+.checkout__desktop-action {
+  margin-top: 16px;
+}
+
+/* --- Mobile order summary (item 6): visible first, no long scroll past
+       the whole form just to see what is being paid --- */
+@media (max-width: 768px) {
+  .checkout__grid { display: flex; flex-direction: column; }
+  .checkout__summary { order: -1; position: static; }
+  .checkout__desktop-action { display: none; }
+}
+
+/* --- Back-to-top (item 7) --- */
+.back-to-top {
+  width: 50px; height: 50px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  background: var(--brand-green-dark); color: var(--brand-gold);
+  border: 1px solid rgba(206,180,100,.6); box-shadow: var(--shadow-md);
+}
+
+/* --- Toast action link (item 6) --- */
+.toast { display: flex; align-items: center; gap: var(--space-3); pointer-events: auto; }
+.toast__action {
+  color: var(--brand-gold); font-weight: 700; white-space: nowrap;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.toast__action:hover { color: #fff; }
+
+/* --- Field helper text (item 5) --- */
+.field__hint { font-size: 0.78rem; }
+
+/* Audit 7: one shared card rhythm in grids and carousels. */
+.product-card { height: 100%; min-width: 0; display: flex; flex-direction: column; }
+.product-card__body { min-width: 0; }
+.product-card__name {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere; line-height: 1.8;
+  height: 3.6em; min-height: 3.6em; flex-shrink: 0;
+}
+.product-card__brand { height: 1.9em; min-height: 1.9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-card__body > .price-tag { margin-top: auto; }
+.product-card__footer { margin-top: 6px; flex-wrap: wrap; }
+
+/* Audit 8: modestly denser, same brand family and palette. */
+:root {
+  --font-size-base: .9375rem;
+  --font-size-md: 1.0625rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.625rem;
+  --font-size-2xl: 2.25rem;
+  --space-3: 14px;
+  --space-4: 22px;
+  --space-5: 28px;
+}
+.product-card__body > .price { margin-top: auto; }
+.product-card__badges { max-width: calc(100% - 20px); }
+.badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.btn { height: auto; min-height: 38px; white-space: normal; overflow-wrap: anywhere; line-height: 1.7; }
+.product-card__footer .btn { flex: 1 1 100px; }
+.product-card__actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+h1, h2, h3, .cart-item__name, .order-item__name, .address-card { overflow-wrap: anywhere; }
+input, select, textarea { min-width: 0; max-width: 100%; }
+.product-detail__info, .cart-item__body, .checkout-page__body { min-width: 0; }
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+  .product-card__footer { gap: 6px; }
+  .product-card__body { padding: 10px; }
+  .price { flex-wrap: wrap; }
+}
+
+.smart-image { opacity: 0; transition: opacity .18s ease; }
+.smart-image.is-loaded { opacity: 1; }
+.content-skeleton { display: grid; gap: 16px; padding-block: 20px; }
+.related-grid > *, .recently-viewed__item { animation: audit-card-in .2s ease both; }
+.related-grid > :nth-child(2), .recently-viewed__item:nth-child(2) { animation-delay: 35ms; }
+.related-grid > :nth-child(3), .recently-viewed__item:nth-child(3) { animation-delay: 70ms; }
+.related-grid > :nth-child(n+4), .recently-viewed__item:nth-child(n+4) { animation-delay: 105ms; }
+@keyframes audit-card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .route-fade, .related-grid > *, .recently-viewed__item { animation: none; }
+  .smart-image { transition: none; }
+  html { scroll-behavior: auto; }
+}
+.wishlist-badge { display: inline-grid; place-items: center; min-width: 20px; padding-inline: 5px; border-radius: 12px; background: var(--brand-green-dark); color: var(--brand-ivory); font-size: var(--font-size-xs); animation: badge-pop .2s ease; }
+.icon-btn[aria-pressed="true"] .icon { animation: badge-pop .2s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .wishlist-badge, .icon-btn[aria-pressed="true"] .icon { animation: none; }
+}
+.search-combobox {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.search-combobox > input {
+  width: 100%;
+  cursor: text;
+}
+
+/* Desktop attached dropdown */
+.combobox-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: var(--color-surface);
+  color: var(--brand-ink);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.combobox-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.combobox-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+.combobox-dropdown::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
+
+.combobox-dropdown--flipped {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.combobox-option {
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
+}
+.combobox-option:hover,
+.combobox-option.is-active {
+  background: var(--brand-green-tint);
+}
+.combobox-option[aria-selected="true"] {
+  font-weight: 700;
+  color: var(--brand-green-dark);
+}
+.combobox-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: var(--font-size-sm);
+}
+
+/* Mobile bottom sheet */
+.combobox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 300;
+  animation: fade-in 0.15s ease;
+}
+
+.combobox-sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 301;
+  background: var(--color-surface);
+  color: var(--brand-ink);
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  max-height: 75vh;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  animation: slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.combobox-sheet__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.combobox-sheet__title {
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  color: var(--brand-ink);
+}
+
+.combobox-sheet__close {
+  padding: 4px 8px;
+  background: transparent;
+  border: 0;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.combobox-sheet__search-box {
+  padding: 10px 16px 6px;
+}
+
+.combobox-sheet__search {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: var(--font-size-base);
+  background: var(--color-surface);
+}
+
+.combobox-sheet__options {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  max-height: 50vh;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+.combobox-sheet__options::-webkit-scrollbar {
+  width: 6px;
+}
+.combobox-sheet__options::-webkit-scrollbar-track {
+  background: transparent;
+}
+.combobox-sheet__options::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
+
+/* Backward compatibility for combobox-panel */
+.combobox-panel { position: fixed; z-index: 200; display: flex; flex-direction: column; padding: 12px; background: var(--color-surface); color: var(--brand-ink); border: 1px solid var(--color-border); border-radius: 12px; box-shadow: var(--shadow-lg); animation: audit-card-in .15s ease; max-height: min(400px, 60dvh); }
+.combobox-panel__head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.combobox-panel__head button { padding: 4px 12px; background: transparent; border: 0; font-size: 24px; }
+.combobox-panel__options { overflow-y: auto; display: flex; flex-direction: column; margin-top: 8px; }
+.combobox-panel [role="option"] { padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+.combobox-panel [role="option"]:hover, .combobox-panel [role="option"].is-active { background: var(--brand-green-tint); }
+.combobox-panel [aria-selected="true"] { font-weight: 700; }
+@media (max-width: 640px) {
+ .combobox-panel { top: auto !important; left: 0 !important; right: 0; bottom: 0; width: auto !important; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); border-radius: 18px 18px 0 0; max-height: 65dvh; }
+}
+@media (prefers-reduced-motion: reduce) { .combobox-panel { animation: none; } }
+/* Audit 15: image/placeholder must match the narrow cart grid track. */
+@media (max-width: 640px) {
+  .cart-item { grid-template-columns: 70px minmax(0, 1fr); }
+  .cart-item > picture, .cart-item img, .cart-item .img-placeholder, .cart-item__noimage,
+  .cart-item__skeleton-img { width: 70px; height: 70px; max-width: 100%; }
+}
+.pagination { flex-wrap: wrap; gap: 8px; }
+.pagination a { padding: 4px 10px; border: 1px solid var(--color-border); border-radius: 6px; }
+.pagination a[aria-current="page"] { background: var(--brand-green-dark); color: white; }
+/* Audit 18: retain gold/olive identity with readable text pairs. */
+.site-header__brand .site-header__brand-name { color: var(--brand-gold); }
+.badge--low { background: var(--brand-ivory); color: var(--brand-gold-deep); border-color: var(--brand-gold-deep); }
+.shop__heading { grid-column: 1 / -1; min-width: 0; }
+.shop__heading h1 { margin: 0; font-size: var(--font-size-xl); }
+
+[hidden] { display: none !important; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.combobox-panel.is-closing { animation: audit-card-in .15s ease reverse both; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .combobox-panel.is-closing { animation: none; } }
+
+/* ==========================================================================
+   PART S6 / AUDIT 19 — PHONE DENSITY, CHECKOUT STEPS, PASSWORD EYES
+   ==========================================================================
+   Everything in this section is additive and lives LAST in the sheet on
+   purpose: earlier audit blocks re-declare the same selectors outside any
+   media query (e.g. `.site-header__search { flex: 1; max-width: 460px }`
+   defeated the ≤768px wrap rule above it), so the phone rules have to be
+   re-stated after them to win the cascade.
+
+   Breakpoints follow the owner's brief:
+     ≤ 767px   phone    : 2 product columns, 8px gaps, 12px page padding
+     ≤ 1023px  tablet   : 3 product columns
+     ≥ 1024px  desktop  : the existing layout, untouched
+   ========================================================================== */
+
+/* --- 1. Phone header: the search field gets its own full-width row --------
+   `.site-header__actions` keeps `margin-inline-start: auto`, so the burger,
+   the brand and the account/cart controls share the first row while the
+   search occupies the second one on its own -- always ≥ 70% of the width,
+   and the Persian placeholder «جستجوی محصول…» is fully visible. */
+@media (max-width: 767px) {
+  /* PR 19: on phones the header leaves the flow entirely. It is FIXED so
+     the collapsed pill can shrink without the document (or scrollY) moving.
+     The sibling `.site-header-spacer` below owns its flow height, always at
+     the expanded natural height -- INCLUDING while the header is folded.
+     That constant contribution to layout is the root-cause fix for the
+     375x812 loop where folding the in-flow header shifted scrollY and the
+     handler read the browser's scroll-anchoring correction as a gesture. */
+  .site-header {
+    position: fixed;
+    top: 0;
+    inset-inline: 0;
+    height: auto;
+  }
+  .site-header-spacer {
+    display: block;
+    /* PR 20: the two-row phone header is ~120px; the variable (the
+       measured border-box height) replaces this fallback on the first
+       frame after mount. */
+    height: var(--header-natural-height, 124px);
+    /* `.app-shell` is a flex column: the spacer must never shrink. */
+    flex: none;
+    /* Never collapses, never animates: a look change of the header must
+       never change the document height. */
+    transition: none;
+  }
+
+  .site-header__inner {
+    flex-wrap: wrap;
+    row-gap: 10px;
+    /* PR 20: while expanded the inner is height:AUTO -- NEVER a pinned
+       pixel value. The old lock (height: var(--header-natural-height))
+       measured 190px on first load while the rows needed 246px, and a
+       locked box can only ever re-measure itself, so the search row
+       permanently spilled out of the bar. `auto` cannot be smaller than
+       its content; the fold animates via a JS FLIP pin (Header.jsx) and
+       the spacer -- not this box -- owns the flow height. (The base
+       rule's desktop height: var(--header-height) is overridden here.) */
+    height: auto;
+  }
+  /* PR 20: exactly two rows. Row 1 = burger, logo + name, account icon,
+     cart (the mega trigger leaves the phone header -- the burger drawer
+     opens the same category sheet; the account label hides in the
+     max-width:1099px block). Row 2 = the full-width search (order 3,
+     basis 100% below). Total ~= 120px. */
+  .site-header__mega-trigger { display: none; }
+  .site-header__search {
+    order: 3;
+    flex: 1 0 100%;
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+  }
+  .site-header__search input { min-height: 44px; }
+  .site-header__brand-name { font-size: var(--font-size-base); }
+
+  /* --- 1b. The phone header collapses to ONE floating pill row -----------
+     Past 80px and still going down (Header.jsx owns the direction) the
+     wrapped phone header folds into the same glass pill as desktop: menu,
+     logo, search icon, cart badge. Scrolling up 24px -- or reaching the top
+     -- restores it. The height is transitioned between the measured natural
+     height and the row height; the spacer keeps the page still. */
+  .site-header--collapsed .site-header__inner {
+    flex-wrap: nowrap;
+    row-gap: 0;
+    height: var(--header-height-row);
+    min-height: var(--header-height-row);
+    width: auto;
+    margin: 8px;
+    padding-block: 0;
+    padding-inline: 10px;
+    gap: var(--space-2);
+    border-radius: 14px;
+    border-color: rgba(206,180,100,.35);
+    background-color: rgba(47,58,24,.88);
+    box-shadow: 0 8px 24px rgba(20,26,10,.25);
+    overflow: hidden;
+  }
+  .site-header--collapsed .site-header__inner::before {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+
+  /* Everything that is not part of the one row steps aside. Categories, the
+     account and the wishlist stay reachable through the burger drawer. */
+  .site-header--collapsed .site-header__search,
+  .site-header--collapsed .site-header__nav,
+  .site-header--collapsed .site-header__mega-trigger,
+  .site-header--collapsed .site-header__actions .btn,
+  .site-header--collapsed .site-header__actions .user-menu { display: none; }
+
+  /* The one row is exactly: menu, logo, search icon, cart badge. The brand
+     NAME steps aside so a long owner-edited name can never push the row
+     wider than the viewport; the logo alone stays as the home affordance. */
+  .site-header--collapsed .site-header__brand { min-width: 0; }
+  .site-header--collapsed .site-header__brand-name { display: none; }
+
+  .site-header--collapsed .site-header__search-toggle { display: inline-grid; }
+
+  /* The search icon grows the field back into view INSIDE the pill: the
+     pill becomes two rows -- row 1 keeps the icons, row 2 is the
+     full-width field inside the pill's padding. PR 20: the field used
+     to stay in the nowrap row with flex-basis:100% and stuck 147px out
+     of the pill (input x=-139..199 at 375px). Wrapping + basis 100% +
+     min-width:0 down the form keeps every edge inside the pill.
+     (The suggestions list is absolutely positioned below the field, so
+     the inner must not clip while the shopper is typing.) The fixed
+     header simply paints over the page; the spacer keeps it still. */
+  .site-header--collapsed.site-header--searching .site-header__inner {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 10px;
+    padding-block: 10px;
+    overflow: visible;
+  }
+  .site-header--collapsed.site-header--searching .site-header__search {
+    display: flex;
+    order: 10;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+  }
+  .site-header--collapsed.site-header--searching .site-header__search form { flex: 1 1 auto; min-width: 0; width: 100%; }
+  .site-header--collapsed.site-header--searching .site-header__search input { flex: 1 1 auto; min-width: 0; }
+
+  /* No backdrop-filter: the phone pill falls back to the solid brand green. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .site-header--collapsed .site-header__inner { background-color: var(--brand-green-dark); }
+  }
+}
+
+/* --- 2. Password fields: the eye button (item 3) --------------------------
+   The button sits at the INLINE END of the field -- the LEFT side in this
+   RTL layout. 40px tap target, tab-reachable, `type="button"` in the
+   component so it can never submit the form. */
+.password-field { position: relative; display: block; }
+.password-field__input { width: 100%; padding-inline-end: 46px; }
+.password-field__toggle {
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+.password-field__toggle:hover { color: var(--brand-green-dark); background: var(--brand-green-tint); }
+.password-field__toggle[aria-pressed="true"] { color: var(--brand-green-dark); }
+.field--error .password-field__input, .password-field__input.is-invalid { border-color: var(--color-danger); }
+
+/* Skeleton cards mirror the REAL card boxes (square media + two text lines),
+   at every width -- otherwise the first paint has a different height than the
+   results that replace it, which is exactly the layout shift the loaders are
+   supposed to prevent. */
+.product-card--skeleton .product-card__image { aspect-ratio: 1 / 1; height: auto; border-radius: 0; }
+
+/* --- 3. Phone product grids: 2 dense columns everywhere ------------------- */
+@media (max-width: 767px) {
+  .container { padding-inline: 12px; }
+
+  .product-grid,
+  .related-grid,
+  .wishlist-grid,
+  .complements__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  /* The «پیشنهاد همراه» cards follow the compact rhythm too: a square image
+     box instead of a fixed 130px strip, so nothing is cropped at ~171px. */
+  .complements__media { display: block; aspect-ratio: 1 / 1; background: #f3f1e8; overflow: hidden; }
+  .complements__media img, .complements__media picture img {
+    width: 100%; height: 100%; object-fit: contain; padding: 6px;
+  }
+  .complements__media picture { display: block; width: 100%; height: 100%; }
+  .complements__name, .complements__price { padding-inline: 8px; overflow-wrap: anywhere; }
+  .complements__name { font-size: 13px; line-height: 1.7; padding-top: 6px; }
+  .complements__price { font-size: 0.8rem; }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .product-grid,
+  .related-grid,
+  .wishlist-grid,
+  .complements__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+}
+
+/* Daily deal keeps its balanced single-column layout on phones; it is
+   not a horizontal carousel. */
+
+/* --- 4. Compact card (item 1) ---------------------------------------------
+   Square, light image field with `object-fit: contain` (nothing is cropped
+   at 171px wide), badges as small chips in one corner, the wishlist heart
+   in the opposite one, a 2-line name, a reserved 1-line brand line and a
+   bottom row holding the bold final price (prices line up across a row)
+   plus the round cart-plus button. */
+@media (max-width: 767px) {
+  .product-card { border-radius: 12px; }
+  .product-card:hover { transform: none; box-shadow: var(--shadow-sm); }
+
+  .product-card__media,
+  .product-card__media-wrap { position: relative; }
+  .product-card__media { aspect-ratio: 1 / 1; background: #f3f1e8; }
+  .product-card__media img,
+  .product-card__media picture img,
+  .product-card__media .img-placeholder,
+  .product-card__media picture { object-fit: contain; }
+  .product-card__media img { padding: 6px; }
+  .product-card__media .img-placeholder { padding: 0; }
+  .product-card__media picture { position: absolute; inset: 0; }
+  .product-card__media picture img {
+    position: absolute; inset: 0; width: 100%; height: 100%; padding: 6px;
+  }
+  .product-card:hover .product-card__img--main { transform: none; }
+  .product-card__img--alt { display: none; }
+
+  .product-card__badges { top: 6px; inset-inline-start: 6px; gap: 4px; max-width: calc(100% - 44px); }
+  .product-card__badges .badge {
+    font-size: 0.68rem;
+    line-height: 1.6;
+    padding: 1px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .product-card__quick-add { display: none; }
+
+  /* Wishlist heart: the corner opposite the badges, 32px tap target. */
+  .product-card__heart {
+    position: absolute;
+    top: 6px;
+    inset-inline-end: 6px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .92);
+    border: 1px solid var(--color-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .product-card__heart:disabled { opacity: .75; }
+
+  .product-card__body { padding: 8px; gap: 2px; }
+  .product-card__name {
+    font-size: 13px;
+    line-height: 1.7;
+    height: 3.4em;
+    min-height: 3.4em;
+  }
+  .product-card__brand { font-size: 11px; height: 1.7em; min-height: 1.7em; }
+  .price--sm .price__current { font-size: 0.95rem; }
+  .product-card__body .price__compare { font-size: 0.72rem; }
+  .product-card__body .price__badge { display: none; }
+
+  .product-card--compact .product-card__footer {
+    margin-top: auto;
+    align-items: flex-end;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .product-card--compact .product-card__footer .price {
+    margin-top: 0;
+    min-width: 0;
+    gap: 4px;
+  }
+  .product-card__add-icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand-green-dark);
+    color: var(--brand-gold);
+    border: 1px solid rgba(206, 180, 100, .6);
+    cursor: pointer;
+  }
+  .product-card__add-icon:disabled { opacity: .7; }
+  .product-card__notify {
+    font-size: 11px;
+    color: var(--brand-gold-deep);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding-block: 8px;
+    text-align: end;
+  }
+
+  /* Skeletons keep the exact box of the real compact card: no layout shift
+     when the products (and then the images) arrive. */
+  .product-card--skeleton .product-card__image,
+  .product-card--skeleton .skeleton.product-card__image { height: auto; aspect-ratio: 1 / 1; border-radius: 0; }
+  .product-card--skeleton .skeleton--line { margin-inline: 8px; }
+}
+
+/* --- 5. Shop: sticky mobile toolbar, bottom sheets, load more (item 1) ----
+   The bar is a deliberate sticky element (like a sticky table header): it is
+   opaque, sits at z-index 30 -- well under the sticky header's 60 -- and only
+   exists below 768px, where the JS also stops rendering it. Its travel box is
+   the shop grid, which is exactly the list it belongs to. */
+.shop__mobile-bar { display: none; position: static; }
+
+@media (max-width: 767px) {
+  .shop { padding-block: 10px; }
+  /* Belt and braces: the sidebar is not even rendered on a phone (the sheet
+     holds the same panel), and CSS hides it if the two ever disagree. */
+  .shop__sidebar { display: none; }
+
+  .shop__mobile-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: sticky;
+    top: var(--site-header-height, 76px);
+    z-index: 30;
+    margin: 0 0 10px;
+    padding: 8px;
+    border-radius: 14px;
+    background: var(--brand-green-dark);
+    border: 1px solid rgba(206, 180, 100, .45);
+    box-shadow: 0 6px 18px rgba(20, 26, 10, .25);
+  }
+  .shop__mobile-bar .shop__mobile-count {
+    margin-inline-start: auto;
+    color: var(--brand-ivory);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .shop__mobile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 6px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(206, 180, 100, .55);
+    background: rgba(206, 180, 100, .14);
+    color: var(--brand-gold);
+    font-weight: 700;
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+  }
+  .shop__mobile-btn__badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    padding-inline: 5px;
+    border-radius: 10px;
+    background: var(--brand-gold);
+    color: var(--brand-green-dark);
+    font-size: 0.72rem;
+  }
+  /* The toolbar's count and sorting select are both in the sticky bar above
+     (result count + sorting sheet), so the row itself is redundant here. */
+  .shop__toolbar { display: none; }
+  .pagination { display: none; }             /* replaced by «نمایش کالاهای بیشتر» */
+  .shop__load-more { display: inline-flex; width: 100%; justify-content: center; margin-top: var(--space-4); }
+  .shop__main { min-width: 0; }
+}
+
+.shop__load-more { display: none; }
+
+/* Bottom sheets (filters + sorting) */
+.sheet {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 130;
+  background: var(--color-surface);
+  border-radius: 18px 18px 0 0;
+  box-shadow: var(--shadow-lg);
+  max-height: 86dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: sheet-in .22s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes sheet-in { from { transform: translateY(14px); opacity: .6; } to { transform: none; opacity: 1; } }
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+.sheet__head h2 { margin: 0; font-size: var(--font-size-md); }
+.sheet__close {
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--color-border); border-radius: 10px;
+  background: var(--color-surface); color: var(--color-text-muted); cursor: pointer;
+}
+.sheet__body { padding: 12px 16px; overflow-y: auto; flex: 1; }
+.sheet__foot {
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.sheet__foot .btn { width: 100%; }
+.sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 129;
+  background: rgba(20, 26, 10, .5);
+  border: 0;
+  padding: 0;
+}
+.sheet__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px 4px;
+  border-bottom: 1px dashed var(--color-border);
+  cursor: pointer;
+}
+.sheet__option:last-of-type { border-bottom: 0; }
+.sheet__option input { width: 20px; height: 20px; }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+.sheet__foot .btn[disabled] { opacity: .6; }
+
+/* --- 6. Checkout: one step at a time on a phone, sticky action bar (item 2) */
+.checkout__mobile-bar {
+  display: none;
+  position: static;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+.checkout__mobile-total small { color: var(--color-text-muted); font-size: 0.72rem; }
+.checkout__mobile-total b { color: var(--brand-green-dark); }
+.checkout__review-block h3 { color: var(--color-text-muted); }
+.checkout__review-change { color: var(--brand-gold-deep); background: none; }
+/* Cart: the same sticky bottom bar the checkout steps use, so the total and
+   «ادامه» stay reachable one-handed while the list scrolls (phone only). */
+.cart-page__mobile-bar {
+  display: none;
+  position: static;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+}
+.cart-page__mobile-total small { color: var(--color-text-muted); font-size: 0.72rem; }
+.cart-page__mobile-total b { color: var(--brand-green-dark); }
+/* Selected delivery card: gold border + tinted field + a ring, identical on
+   every screen size (declared out here so the contrast audit can see it). */
+.shipping-method--active {
+  border-color: var(--brand-gold-deep);
+  background: var(--brand-green-tint);
+  box-shadow: inset 0 0 0 1px var(--brand-gold-deep);
+}
+
+@media (max-width: 767px) {
+  .checkout { padding-bottom: 96px; }        /* room for the fixed action bar */
+  .checkout__grid { grid-template-columns: 1fr; }
+  .checkout__summary { position: static; order: 0; }
+
+  .checkout__mobile-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 90;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 22px rgba(30, 36, 18, .12);
+  }
+  .checkout__mobile-bar-row { display: flex; align-items: center; gap: var(--space-3); }
+  .checkout__mobile-total { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
+  .checkout__mobile-total b { font-size: var(--font-size-md); white-space: nowrap; }
+  .checkout__mobile-bar .btn { flex: 1; min-height: 46px; }
+
+  /* Cart phone bar: identical geometry to the checkout one above. */
+  .cart-page { padding-bottom: 96px; }      /* room for the fixed action bar */
+  .cart-page__mobile-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 90;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -6px 22px rgba(30, 36, 18, .12);
+  }
+  .cart-page__mobile-bar-row { display: flex; align-items: center; gap: var(--space-3); }
+  .cart-page__mobile-total { display: flex; flex-direction: column; line-height: 1.4; min-width: 0; }
+  .cart-page__mobile-total b { font-size: var(--font-size-md); white-space: nowrap; }
+  .cart-page__mobile-bar .btn { flex: 1; min-height: 46px; }
+
+  /* The review step (phone only): address + delivery method + items, with a
+     «تغییر» link on every block that can still change. */
+  .checkout__review-totals { margin: var(--space-2) 0 0; font-size: var(--font-size-sm); }
+  .checkout__review-totals > div { display: flex; justify-content: space-between; padding-block: 3px; }
+  .checkout__review-totals dd { margin: 0; }
+  .checkout__review-block { border-bottom: 1px dashed var(--color-border); padding-block: var(--space-3); }
+  .checkout__review-block:last-of-type { border-bottom: 0; }
+  .checkout__review-block h3 { margin: 0 0 6px; font-size: var(--font-size-sm); }
+  .checkout__review-block p { margin: 0; }
+  .checkout__review-change { border: 0; padding: 6px 0; font-weight: 700; cursor: pointer; text-decoration: underline; }
+
+  /* Delivery methods become large selectable cards: icon, title, delivery
+     time and price, with the selected one clearly highlighted. */
+  .shipping-method {
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: 14px;
+    border-width: 2px;
+  }
+  .shipping-method__icon {
+    flex: none;
+    width: 40px; height: 40px;
+    display: inline-grid; place-items: center;
+    border-radius: 12px;
+    background: var(--brand-green-tint);
+    color: var(--brand-green-dark);
+  }
+  .shipping-method__body { min-width: 0; gap: 2px; }
+  .shipping-method__body strong { font-size: var(--font-size-base); }
+  .shipping-method__cost { font-size: var(--font-size-base); }
+  .shipping-method--active .shipping-method__icon { background: #fff; }
+}
+
+@media (max-width: 480px) {
+  .shipping-method {
+    display: grid;
+    grid-template-columns: 18px 30px minmax(0, 1fr);
+    column-gap: 8px;
+    row-gap: 4px;
+    padding: 10px;
+  }
+  .shipping-method input[type="radio"] { grid-column: 1; grid-row: 1; margin: 4px 0 0; }
+  .shipping-method__icon { grid-column: 2; grid-row: 1; width: 30px; height: 30px; border-radius: 9px; }
+  .shipping-method__icon .icon { width: 16px; height: 16px; }
+  .shipping-method__body { grid-column: 3; grid-row: 1; width: 100%; }
+  .shipping-method__cost { grid-column: 3; grid-row: 2; white-space: normal; font-size: var(--font-size-sm); }
+  .shipping-method__body > .muted { display: block; }
+}
+
+/* The delivery section must follow the address directly on desktop too, and
+   its heading must be unmistakable. */
+.checkout__section > h2 { font-size: var(--font-size-lg); margin-top: 0; }
+.checkout__step-anchor { display: inline; }
+
+/* Clickable, clearly-marked stepper: earlier steps go back, the current step
+   is the only strong element, future steps stay muted. */
+.checkout__step button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.checkout__step--todo { opacity: .65; }
+.checkout__step--clickable:hover { border-color: var(--brand-gold-deep); }
+
+/* Full-screen product images: never scale the page image in place. */
+.product-lightbox {
+  position: fixed; inset: 0; z-index: 1400; height: 100vh; height: 100dvh;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--space-3);
+  padding: max(var(--space-3), env(safe-area-inset-top, 0px)) var(--space-3) max(var(--space-3), env(safe-area-inset-bottom, 0px));
+  background: rgba(10, 12, 7, .96); color: #fff; overscroll-behavior: contain;
+  animation: gallery-fade-in 180ms ease;
+}
+.product-lightbox__header { display: flex; align-items: center; gap: var(--space-3); }
+.product-lightbox__header p { margin: 0; white-space: nowrap; }
+.product-lightbox__header > span { margin-inline-start: auto; font-size: var(--font-size-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.product-lightbox__button { display: inline-grid; place-items: center; flex: 0 0 auto; width: 48px; height: 48px; padding: 0; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; color: #fff; background: rgba(0,0,0,.65); cursor: pointer; }
+.product-lightbox__button:focus-visible, .product-lightbox .thumb:focus-visible { outline: 3px solid var(--brand-gold); outline-offset: 3px; }
+.product-lightbox__stage { position: relative; min-height: 0; touch-action: pan-y pinch-zoom; }
+.product-lightbox__stage .product-gallery__layer { inset: 0 60px; }
+.product-lightbox__stage .product-gallery__layer--active { animation: lightbox-image-in 200ms ease; }
+.product-lightbox__stage .img-placeholder { height: 100%; }
+.product-lightbox__previous, .product-lightbox__next { position: absolute; top: calc(50% - 24px); }
+.product-lightbox__previous { inset-inline-start: 0; }
+.product-lightbox__next { inset-inline-end: 0; }
+.product-lightbox__thumbs { display: flex; gap: var(--space-2); overflow-x: auto; max-width: 100%; justify-self: center; padding: 5px; scroll-snap-type: x mandatory; }
+.product-lightbox .thumb--active { border-color: var(--brand-gold); }
+@keyframes lightbox-image-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+@media (max-width: 767px) {
+  .product-lightbox__stage .product-gallery__layer { inset: 0; }
+  .product-lightbox__button { width: 44px; height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-lightbox, .product-lightbox__stage .product-gallery__layer--active { animation: none; }
+}
+
+/* Shop selectors: searchable brands and an actual expandable category tree. */
+.filter-option { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; cursor: pointer; font-size: var(--font-size-sm); }
+.filter-option input { flex: 0 0 auto; width: auto; accent-color: var(--brand-green-dark); }
+.brand-filter__options { max-height: 280px; overflow-y: auto; margin-top: var(--space-2); }
+.category-filter { max-height: 440px; overflow-y: auto; }
+.category-filter ul { list-style: none; margin: 0; padding: 0; }
+.category-filter ul ul { margin-inline-start: 12px; padding-inline-start: 12px; border-inline-start: 1px solid var(--color-border); }
+.category-filter__row { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.category-filter__toggle { display: inline-grid; place-items: center; flex: 0 0 auto; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--brand-green-dark); cursor: pointer; }
+.category-filter__toggle[aria-expanded="false"] svg { transform: rotate(90deg); }
+/* One rail, two overlaid native sliders. Only their thumbs receive pointers. */
+.price-range__selected { display: block; font-size: var(--font-size-sm); font-weight: 700; }
+.price-range__control { position: relative; height: 52px; margin-inline: 4px; }
+.price-range__rail { position: absolute; inset-inline: 12px; top: 24px; height: 4px; background: var(--color-border); border-radius: 4px; }
+.price-range__rail span { position: absolute; height: 100%; background: var(--brand-green-dark); border-radius: inherit; }
+.price-range__input { position: absolute; inset: 0; width: 100%; height: 52px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; appearance: none; -webkit-appearance: none; pointer-events: none; direction: rtl; touch-action: none; }
+.price-range__input::-webkit-slider-runnable-track { height: 4px; background: transparent; border: 0; }
+.price-range__input::-moz-range-track { height: 4px; background: transparent; border: 0; }
+.price-range__input::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; pointer-events: auto; width: 24px; height: 24px; margin-top: -10px; border: 2px solid var(--brand-green-dark); border-radius: 50%; background: #fff; cursor: grab; touch-action: none; }
+.price-range__input::-moz-range-thumb { pointer-events: auto; width: 20px; height: 20px; border: 2px solid var(--brand-green-dark); border-radius: 50%; background: #fff; cursor: grab; touch-action: none; }
+.price-range__input:focus-visible { outline: none; }
+.price-range__input:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--brand-gold-deep); outline-offset: 3px; }
+.price-range__input:focus-visible::-moz-range-thumb { outline: 3px solid var(--brand-gold-deep); outline-offset: 3px; }
+.price-range__control--disabled { opacity: .5; }
+.price-range__input:disabled::-webkit-slider-thumb { pointer-events: none; cursor: default; }
+.price-range__input:disabled::-moz-range-thumb { pointer-events: none; cursor: default; }
+.price-range__extremes { margin: 0; font-size: var(--font-size-xs); color: var(--color-text-muted); line-height: 1.9; }
+
+.shipping-method--disabled { background: var(--color-bg); cursor: not-allowed; }
+.shipping-method--disabled .shipping-method__icon,
+.shipping-method--disabled strong { color: var(--color-text-muted); }
+
+/* --- Owner-editable content (Task 3) --- */
+
+/* Text hero shown when no banner exists yet: same copy block as a slide,
+   on the brand's dark surface, so a fresh install is never headless. */
+.hero--copy {
+  background: var(--brand-green-dark);
+  min-height: clamp(220px, 34vw, 340px);
+  display: flex;
+  align-items: flex-end;
+}
+.hero--copy .hero__copy { padding-block: var(--space-6); }
+.hero--copy .hero__copy p { margin-bottom: var(--space-4); }
+
+.site-footer__tagline { color: var(--brand-gold); font-weight: 600; margin-bottom: var(--space-2); }
+.site-footer__contact p { margin: 0 0 var(--space-1); }
+.site-footer__contact a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.site-footer__social {
+  list-style: none;
+  display: flex;
+  gap: var(--space-2);
+  padding: 0;
+  margin: var(--space-3) 0 0;
+}
+.site-footer__social a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(206, 180, 100, .5);
+  color: var(--brand-gold);
+}
+.site-footer__social a:hover { background: rgba(206, 180, 100, .15); }
+
+/* Owner-written rich text (sanitised allowlist: p, strong, em, h2, ul/ol,
+   li, a, blockquote). Persian line-height and RTL list markers; no
+   <script>/<style>/inline styles ever reach this container. */
+.rich-text > :first-child { margin-top: 0; }
+.rich-text > :last-child { margin-bottom: 0; }
+.rich-text p { margin: 0 0 var(--space-3); }
+.rich-text h2 { font-size: var(--font-size-lg); margin: var(--space-4) 0 var(--space-2); }
+.rich-text h3 { font-size: var(--font-size-md); margin: var(--space-3) 0 var(--space-2); }
+.rich-text ul, .rich-text ol { padding-inline-start: var(--space-4); margin: 0 0 var(--space-3); }
+.rich-text li { margin-bottom: var(--space-2); }
+.rich-text a { color: var(--color-primary-dark); text-decoration: underline; text-underline-offset: 3px; }
+.rich-text a:hover { color: var(--color-accent); }
+.rich-text blockquote {
+  margin: var(--space-3) 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--brand-gold);
+  color: var(--color-text-muted);
+}
+
+.skeleton-line {
+  height: 14px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--color-border), var(--color-bg), var(--color-border));
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+}
+.skeleton-line--short { width: 45%; }
+@keyframes skeleton-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ==========================================================================
+   PR 20 — HEADER FOLLOW-UPS (live test of PR 19) + CONFIRM DIALOG
+   ==========================================================================
+   Appended last for the same reason as the S6 block: these ranges must
+   win over the earlier unconditional header rules. What lives here:
+     768-1199px  tightened desktop/tablet gaps, flexible search floor
+     768-1099px  the tablet header (text nav stays in the drawer)
+     <= 1099px   icon-only account controls (phone row 1 + tablet)
+     .confirm-dialog / .btn--danger — the window.confirm() replacement
+   ========================================================================== */
+
+/* Below 1200px the bar and the pill run out of slack: tighten the gaps,
+   let the search flex down to a sensible 200px floor (never to the
+   29px sliver the tablet pill had), and let long brand/account names
+   ellipsize instead of pushing the row wider than the pill. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .site-header__inner { gap: 12px; }
+  .site-header__nav { gap: 12px; }
+  .site-header__actions { gap: 12px; }
+  .site-header__search { min-width: 200px; }
+  .site-header__brand { min-width: 0; }
+  .site-header__brand-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .user-menu__trigger-label { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* Tablet (768-1099px, e.g. iPad Air 820px): the full desktop row cannot
+   fit -- the search was 167px at rest / 29px in the pill, and
+   «دسته‌بندی کالاها» / «حساب کاربری» wrapped into an 87px pill. So this
+   range gets the compact chrome: the burger does the navigation (the
+   text links live in its drawer), the mega trigger is icon + SHORT
+   label with nowrap, the account button is icon-only (block below),
+   and the search flexes with a 220px floor. One row, always. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .site-header__inner { flex-wrap: nowrap; }
+  .site-header__nav { display: none; }
+  .site-header__burger { display: block; }
+  .site-header__mega-label { display: none; }
+  .site-header__mega-label--short { display: inline; }
+  .site-header__search { flex: 1 1 auto; min-width: 220px; max-width: none; }
+}
+
+/* Icon-only account controls: the phone header's first row and the
+   whole tablet range. The visible name/«ورود | ثبت‌نام» text steps
+   aside; the aria-label in Header.jsx carries the name instead. Both
+   controls keep a 44px+ tap target. */
+@media (max-width: 1099px) {
+  .user-menu__trigger-label,
+  .site-header__login-label { display: none; }
+  .user-menu__trigger,
+  .site-header__login {
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+/* --- Confirm dialog (PR 20): the styled replacement for window.confirm().
+   Rendered through the body Portal; RTL inherits from <html>, colours are
+   the brand's, and it layers above the drawers/toaster (115/116/120) but
+   below the product lightbox (1400). «انصراف» is first in the DOM (and
+   first focused); «حذف» is the danger button at the inline end. */
+.btn--danger { background: var(--color-danger); color: #fff; }
+.btn--danger:hover:not(:disabled) { background: #992a1a; }
+.confirm-dialog {
+  position: fixed; inset: 0; z-index: 210;
+  display: grid; place-items: center;
+  padding: var(--space-3);
+}
+.confirm-dialog__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(20, 26, 10, .5);
+  animation: fade-in .18s ease-out;
+}
+.confirm-dialog__box {
+  position: relative;
+  width: min(420px, 100%);
+  background: #fff; color: var(--brand-ink);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-4);
+  animation: confirm-dialog-in .18s ease-out;
+}
+@keyframes confirm-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+.confirm-dialog__message { margin: 0 0 var(--space-4); font-weight: 700; line-height: 1.9; }
+.confirm-dialog__actions { display: flex; gap: var(--space-2); justify-content: flex-end; flex-wrap: wrap; }
+.confirm-dialog__actions .btn { min-height: 44px; min-width: 96px; }
+@media (prefers-reduced-motion: reduce) {
+  .confirm-dialog__backdrop, .confirm-dialog__box { animation: none; }
+}
+
+/* ==========================================================================
+   PR 21 — FIXES FROM THE LIVE TEST OF PR 20
+   ==========================================================================
+   Appended last (same reason as the PR 20 block: these must win over the
+   earlier unconditional header rules). What lives here:
+     <= 1099px   the account panel anchors to the trigger's LEFT edge
+     phone band  «پیشنهاد امروز» never wraps; the timer drops to its own row
+     search (×)  the native clear button wears the brand, 44px hit area
+     <= 767px    checkout review thumbnails capped at 64px
+   ========================================================================== */
+
+/* --- The account panel can no longer open off-screen ----------------------
+   At <= 1099px the trigger is the icon-only 44px button at the INLINE END
+   of the row, i.e. flush with the physical LEFT edge of the viewport. The
+   panel used to position itself from `inset-inline-start: 0` (its right
+   edge on the trigger's right edge) and so opened LEFTWARD, out of the
+   viewport: live x = -123..57 at 375px, -97..83 at 820 and 1024px.
+   Anchoring to the trigger's physical LEFT edge makes it open to the
+   right, and the viewport cap keeps it on screen at any width. Wide
+   screens (>= 1100px, live 1366px x = 8..188) keep the current
+   placement. */
+@media (max-width: 1099px) {
+  .user-menu__panel {
+    left: 0;
+    right: auto;
+    max-width: calc(100vw - 16px);
+  }
+}
+
+/* --- Phone deals band header ---------------------------------------------
+   «پیشنهاد امروز» wrapped onto two lines next to «مشاهده همه» and the
+   timer. The title is one line now, and the header may wrap: when the
+   row cannot fit, the countdown drops to its own full-width row under
+   the title + link (the phone band is only ever rendered <= 767px). */
+.deals-mobile__title { white-space: nowrap; }
+.deals-mobile__header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 10px;
+}
+.deals-mobile__head-main { flex: 1 1 auto; }
+@media (max-width: 480px) {
+  /* 360-480px: title + «مشاهده همه» (about 205px) plus the timer (about
+     185px) never fit, so the timer takes the whole second row instead of
+     squeezing the title into two lines. */
+  .deals-mobile__header > .countdown {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-inline-start: 0;
+    justify-content: center;
+  }
+}
+
+/* --- The search field's native clear (×) --------------------------------
+   WebKit paints `::-webkit-search-cancel-button` in the browser-default
+   blue. It is a real control, so it gets a real 44px hit area and the
+   brand's colours: gold on the green header, ink on white surfaces (the
+   shop's brand filter). The glyph is a mask so one path serves both. */
+input[type="search"] { --search-clear-color: var(--brand-ink); }
+.site-header__search input { --search-clear-color: var(--brand-gold); }
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  cursor: pointer;
+  opacity: .85;
+  background-color: var(--search-clear-color, var(--brand-ink));
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6L6 18' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+  mask: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6L6 18' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") center / 18px 18px no-repeat;
+}
+input[type="search"]::-webkit-search-cancel-button:hover { opacity: 1; }
+input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+
+/* --- Checkout review thumbnails on phones --------------------------------
+   The line-item image rendered at ~110px and squeezed «کارد ۵۵۱۰» onto two
+   lines. Capped at 64px on phones, matching the cart's 70px rail. */
+@media (max-width: 767px) {
+  .checkout__review-item > picture,
+  .checkout__review-item > picture img,
+  .checkout__review-item > img,
+  .checkout__review-item > .img-placeholder {
+    flex: none;
+    width: 64px;
+    height: 64px;
+    max-width: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+}

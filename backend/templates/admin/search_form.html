@@ -1,0 +1,26 @@
+{% load i18n static adminui_extras %}
+{% if cl.search_fields %}
+<div id="toolbar">
+  <form id="changelist-search" method="get" role="search">
+    <div>
+      <label for="searchbar"><img src="{% static "admin/img/search.svg" %}" alt="جستجو"></label>
+      <input type="search" size="40" name="{{ search_var }}" value="{{ cl.query }}" id="searchbar"
+             placeholder="جستجو…"{% if cl.search_help_text %} aria-describedby="searchbar_helptext"{% endif %}>
+      <input type="submit" value="جستجو">
+      {% if show_result_count %}
+        {% comment %}
+        Cusin: Django's own string counts in ASCII («1 result»). Persian
+        has no singular/plural distinction worth a plural tag here.
+        {% endcomment %}
+        <span class="small quiet">{{ cl.result_count|numfa }} نتیجه</span>
+      {% endif %}
+      {% for pair in cl.params.items %}
+        {% if pair.0 != search_var %}<input type="hidden" name="{{ pair.0 }}" value="{{ pair.1 }}">{% endif %}
+      {% endfor %}
+    </div>
+    {% if cl.search_help_text %}
+      <div class="help" id="searchbar_helptext">{{ cl.search_help_text }}</div>
+    {% endif %}
+  </form>
+</div>
+{% endif %}

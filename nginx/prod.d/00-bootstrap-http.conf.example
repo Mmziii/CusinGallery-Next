@@ -1,0 +1,235 @@
+# ONE-TIME TLS bootstrap configuration (Phase E) -- see docs/DEPLOY.md.
+#
+# The production nginx config (cusin.conf) needs Let's Encrypt
+# certificates that do not exist on a fresh server yet, and issuing them
+# needs a working HTTP server. This file is that temporary HTTP-only
+# server: it serves the ACME challenge AND proxies the whole site over
+# plain HTTP so the shop is even usable while the certificate is being
+# obtained.
+#
+# Usage (exact steps in docs/DEPLOY.md, section «فعال‌سازی SSL»):
+#   1. cp nginx/prod.d/00-bootstrap-http.conf.example \
+#         nginx/prod.d/00-bootstrap.conf
+#      mv nginx/prod.d/cusin.conf nginx/prod.d/cusin.conf.pending
+#      (only ONE :80 server for this server_name may exist at a time)
+#   2. docker compose -f docker-compose.prod.yml up -d --no-deps nginx
+#   3. docker compose -f docker-compose.prod.yml run --rm certbot \
+#        certonly --webroot -w /var/www/certbot \
+#        -d cusin.ir -d www.cusin.ir \
+#        --email you@example.com --agree-tos --no-eff-email
+#   4. rm nginx/prod.d/00-bootstrap.conf
+#      mv nginx/prod.d/cusin.conf.pending nginx/prod.d/cusin.conf
+#      docker compose -f docker-compose.prod.yml restart nginx
+#   5. Set HTTPS_ENABLED=True in .env and restart the backend.
+
+upstream backend_upstream {
+    server backend:8000;
+}
+
+upstream frontend_upstream {
+    server frontend:80;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name cusin.ir www.cusin.ir;
+    # nginx's version banner has no business on a public shop.
+    server_tokens off;
+
+    # Security headers, on every response of this server block.
+    # NOTE: `add_header` is inherited by a nested block ONLY if that block
+    # defines none of its own -- so these are repeated inside each location
+    # below that sets its own Cache-Control. The `always` flag is required:
+    # without it nginx drops them on 4xx/5xx responses, which is exactly
+    # where clickjacking and MIME-sniffing attempts aim.
+    # HSTS is deliberately NOT part of this list in the plain-HTTP configs:
+    # it is meaningless over http and misleading in logs.
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    client_max_body_size 10m;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    # Even during the HTTP bootstrap, only collectstatic's content-hashed
+    # names receive a long cache lifetime. Unhashed admin URLs are revalidated.
+    # The pattern is QUOTED on purpose: it contains `{12}`, and nginx
+    # ends an unquoted token at the first `{`, so pcre2 would receive
+    # `^/static/(.+\.[a-f0-9]` and fail at startup with
+    # "pcre2_compile() failed: missing closing parenthesis".
+    # apps/core/test_nginx_configs.py enforces this rule.
+    location ~* "^/static/(.+\.[a-f0-9]{12}\.[^/]+)$" {
+        alias /app/staticfiles/$1;
+        expires 30d;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "public, immutable" always;
+    }
+
+    location /static/ {
+        alias /app/staticfiles/;
+        expires off;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "no-cache, must-revalidate" always;
+    }
+
+    location /media/ {
+        alias /app/media/;
+    }
+
+    location /api/ {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /admin/ {
+        # Same-origin only: the RelatedObject "+" popups render inside an
+        # in-page iframe. Hide Django's DENY so the response carries one
+        # X-Frame-Options value, not two.
+        proxy_hide_header X-Frame-Options;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /payment/callback/ {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /healthz {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        access_log off;
+    }
+
+    # SEO files are rendered by Django (dynamic product sitemap, robots
+    # policy) -- without these two exact matches the SPA fallback below
+    # would answer /robots.txt and /sitemap.xml with index.html.
+    location = /robots.txt {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    location = /sitemap.xml {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # --- Storefront build output (frontend container) ---------------------
+    # Audit 19 item 5: page requests go to Django (see `location /`), so the
+    # bundle, the self-hosted fonts and the brand images need their own
+    # locations -- the frontend container owns these files.
+    location ^~ /assets/ {
+        proxy_pass http://frontend_upstream;
+        proxy_set_header Host $host;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    location ^~ /fonts/ {
+        proxy_pass http://frontend_upstream;
+        proxy_set_header Host $host;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    location ^~ /brand/ {
+        proxy_pass http://frontend_upstream;
+        proxy_set_header Host $host;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "public, max-age=86400" always;
+    }
+
+    location = /favicon.svg {
+        proxy_pass http://frontend_upstream;
+        proxy_set_header Host $host;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "public, max-age=86400" always;
+    }
+
+    location = /favicon.ico {
+        proxy_pass http://frontend_upstream;
+        proxy_set_header Host $host;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "public, max-age=86400" always;
+    }
+
+    location = /index.html {
+        proxy_pass http://frontend_upstream;
+        proxy_set_header Host $host;
+        # Repeated: nginx drops the server-level add_headers as soon as a
+        # location defines one of its own (see the note in the server block).
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+        add_header Cache-Control "no-cache, must-revalidate" always;
+    }
+
+    # --- Storefront pages: Django owns the decision ----------------------
+    # Every page request goes to the catch-all view (apps/core/spa.py): a
+    # real page answers with the built index.html and status 200, anything
+    # else with the same Persian document and a REAL 404 (plus
+    # <meta name="robots" content="noindex">). nginx used to answer every
+    # path with the shell and status 200 -- a soft 404.
+    location / {
+        proxy_pass http://backend_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
