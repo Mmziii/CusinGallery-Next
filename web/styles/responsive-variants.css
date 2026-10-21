@@ -1,0 +1,16 @@
+/* SSR renders both variants. Keep the copied storefront CSS unchanged.
+   display:none also removes the inactive links/buttons from the tab order
+   and accessibility tree, before JavaScript or hydration is available. */
+@media (max-width: 767px) {
+  .deals-desktop,
+  .product-card--desktop {
+    display: none;
+  }
+}
+
+@media (min-width: 768px) {
+  .deals-mobile,
+  .product-card--compact {
+    display: none;
+  }
+}
