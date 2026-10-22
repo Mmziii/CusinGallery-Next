@@ -10,11 +10,11 @@ import apiClient from "../services/apiClient";
  * setup (backend SENTRY_DSN + sentry_sdk).
  *
  * Double gate -- data only leaves the browser when BOTH are open:
- *   - build-time VITE_SENTRY_DSN is non-empty (this file), AND
+ *   - build-time NEXT_PUBLIC_SENTRY_DSN is non-empty (this file), AND
  *   - the backend's own SENTRY_DSN is configured (server-side capture);
  *     without it the report is only written to the server log.
- * VITE_SENTRY_DSN empty => reportFrontendError is a no-op that never
- * sends anything.
+ * NEXT_PUBLIC_SENTRY_DSN empty => reportFrontendError is a no-op that
+ * never sends anything.
  */
 const ENABLED = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
 

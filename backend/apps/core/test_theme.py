@@ -10,9 +10,10 @@ feature promises:
 * a palette whose text is below 4.5:1 is refused with a Persian message
   naming the pair -- the row is not saved.
 
-The storefront wiring (CSS variables / header / buttons) is covered by the
-frontend's vitest files; here we test the tokens the backend emits and the
-inline block spa.py puts in <head>.
+The storefront wiring (CSS variables / header / buttons) is covered by
+the web app's vitest files; here we test the tokens the backend emits
+(consumed by web/app/layout.js before the first paint) and the safety
+rules above.
 """
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -439,29 +440,3 @@ class ThemeAdminTests(CacheIsolationMixin, TestCase):
             self.client.get(reverse("admin:core_sitesettings_reset_theme")).status_code,
             405,
         )
-
-
-class SpaThemeInjectionTests(CacheIsolationMixin, TestCase):
-    def test_home_page_inlines_the_theme_variables_and_bootstrap(self):
-        response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
-        html = response.content.decode()
-        self.assertIn('id="cusin-theme-vars"', html)
-        self.assertIn("--color-primary:#637037", html)
-        self.assertIn("--color-header-bg:#FFFFFF", html)
-        self.assertIn("window.__CUSIN_THEME__=", html)
-        # The inline block sits before </head>, i.e. before any stylesheet
-        # or script the first paint depends on.
-        self.assertLess(html.index('id="cusin-theme-vars"'), html.index("</head>"))
-
-    def test_a_saved_theme_is_visible_on_the_next_page_request(self):
-        site = SiteSettings.load()
-        site.theme_primary = "#123456"
-        site.save()
-        html = self.client.get("/").content.decode()
-        self.assertIn("--color-primary:#123456", html)
-
-    def test_unknown_page_still_gets_the_theme_and_a_404(self):
-        response = self.client.get("/no-such-page/")
-        self.assertEqual(response.status_code, 404)
-        self.assertIn('id="cusin-theme-vars"', response.content.decode())

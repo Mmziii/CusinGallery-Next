@@ -259,7 +259,7 @@ describe("Phase 4 info pages SSR, SEO metadata, 404 & fail-open", () => {
     expect(dropHtml).toContain("ارتباط با سرور برقرار نشد.");
   });
 
-  it("matches frontend/src/pages/NotFound.jsx markup, Persian copy, and home link", () => {
+  it("renders the Persian 404 markup, copy, and home link", () => {
     const html = renderToStaticMarkup(<NotFound />);
     expect(html).toBe(
       '<section class="notfound"><h1>۴۰۴</h1><p>صفحه مورد نظر پیدا نشد؛ شاید نشانی عوض شده است.</p><a class="btn btn--primary" href="/">بازگشت به فروشگاه</a></section>'
@@ -364,15 +364,6 @@ describe("Phase 4 navigation cutover", () => {
       expect(assign).toHaveBeenCalledWith("/api/v1/orders/1/invoice/");
     } finally {
       vi.unstubAllGlobals();
-    }
-  });
-
-  it("mirrors DJANGO_OWNED_PREFIXES and isNextOwnedPath logic in frontend/src/utils/nextRoutes.jsx", () => {
-    const spaNextRoutes = readRepoFile("frontend/src/utils/nextRoutes.jsx");
-    expect(spaNextRoutes).not.toContain("NEXT_OWNED_PREFIXES");
-    expect(spaNextRoutes).toContain("DJANGO_OWNED_PREFIXES");
-    for (const prefix of DJANGO_OWNED_PREFIXES) {
-      expect(spaNextRoutes).toContain(`"${prefix}"`);
     }
   });
 });
@@ -525,8 +516,6 @@ describe("Phase 4 Nginx routing & guardrails", () => {
       "/healthz",
       "/robots.txt",
       "/sitemap.xml",
-      "/seo/",
-      "/seo/product/copper-pot/",
     ]) {
       const winner = matchNginxLocation(locations, djangoUrl);
       expect(winner?.body, `${configPath} -> ${djangoUrl}`).toContain("proxy_pass http://backend_upstream;");
@@ -535,16 +524,32 @@ describe("Phase 4 Nginx routing & guardrails", () => {
     expect(matchNginxLocation(locations, "/static/admin/css/base.css")?.body).toContain("alias /app/staticfiles/");
     expect(matchNginxLocation(locations, "/media/products/pot.jpg")?.body).toContain("alias /app/media/");
 
-    for (const spaAsset of ["/assets/index.js", "/fonts/vazirmatn.woff2", "/brand/og.png", "/favicon.svg", "/favicon.ico"]) {
-      const winner = matchNginxLocation(locations, spaAsset);
-      expect(winner?.body, `${configPath} -> ${spaAsset}`).toContain("proxy_pass http://frontend_upstream;");
+    // Phase 5: the SPA static locations are gone -- the kept public files
+    // are served by Next from web/public/ through the catch-all. /assets/
+    // (the Vite bundle) has no block either; nothing references it anymore.
+    for (const publicAsset of ["/assets/index.js", "/fonts/vazirmatn.woff2", "/brand/og.png", "/favicon.svg", "/favicon.ico"]) {
+      const winner = matchNginxLocation(locations, publicAsset);
+      expect(winner?.body, `${configPath} -> ${publicAsset}`).toContain("proxy_pass http://web:3000;");
     }
   });
 
-  it("keeps phase 5 cleanup targets untouched and avoids fetch/useMediaQuery in Next info code", () => {
-    expect(existsSync(new URL("../../frontend/src/App.jsx", import.meta.url))).toBe(true);
-    expect(existsSync(new URL("../../backend/apps/core/spa.py", import.meta.url))).toBe(true);
-    expect(readRepoFile("backend/config/urls.py")).toContain("spa_page");
+  it("completes the phase 5 cleanup and avoids fetch/useMediaQuery in Next info code", () => {
+    expect(existsSync(new URL("../../frontend", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../../docker/frontend", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../../backend/apps/core/spa.py", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../../backend/apps/core/seo.py", import.meta.url))).toBe(false);
+    expect(existsSync(new URL("../app/not-found-page", import.meta.url))).toBe(false);
+    expect(readRepoFile("backend/config/urls.py")).not.toContain("spa_page");
+    expect(readRepoFile("backend/config/urls.py")).not.toContain("/seo/");
+    for (const configPath of [
+      "nginx/conf.d/cusin.conf",
+      "nginx/prod.d/cusin.conf",
+      "nginx/prod.d/00-bootstrap-http.conf.example",
+    ]) {
+      const conf = readRepoFile(configPath);
+      expect(conf).not.toContain("frontend_upstream");
+      expect(conf).not.toContain("location /seo/ {");
+    }
 
     for (const file of ["web/lib/info-server.js", "web/info/InfoPage.jsx", "web/info/InfoPageRoute.jsx"]) {
       const src = readRepoFile(file);

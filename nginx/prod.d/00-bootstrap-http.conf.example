@@ -26,9 +26,6 @@ upstream backend_upstream {
     server backend:8000;
 }
 
-upstream frontend_upstream {
-    server frontend:80;
-}
 
 server {
     listen 80;
@@ -130,8 +127,8 @@ server {
     }
 
     # SEO files are rendered by Django (dynamic product sitemap, robots
-    # policy) -- without these two exact matches the SPA fallback below
-    # would answer /robots.txt and /sitemap.xml with index.html.
+    # policy) -- without these two exact matches the Next catch-all below
+    # would answer /robots.txt and /sitemap.xml as storefront 404s.
     location = /robots.txt {
         proxy_pass http://backend_upstream;
         proxy_set_header Host $host;
@@ -143,230 +140,16 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Legacy Django SEO endpoints (still referenced until phase 5 cleanup).
-    location /seo/ {
-        proxy_pass http://backend_upstream;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # --- Catalog pages: served by the Next app ---------------------------
-    # /shop/, /products/<slug>/ and /brands/<slug>/ are server-rendered by
-    # Next: every visitor gets real HTML with real Open Graph/JSON-LD, so the
-    # old bot-only /seo/ rewrites are gone (Next serves bots and humans the
-    # same document). Slashed and unslashed spellings both reach Next, which
-    # redirects to the canonical trailing-slash URL; filter/paging query
-    # strings pass through untouched. /robots.txt and /sitemap.xml stay on
-    # Django (exact matches above).
-    location ~ ^/shop/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/products/[^/]+/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/brands/[^/]+/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    # --- Storefront build output (frontend container) ---------------------
-    # Audit 19 item 5: page requests go to Django (see `location /`), so the
-    # bundle, the self-hosted fonts and the brand images need their own
-    # locations -- the frontend container owns these files.
-    location ^~ /assets/ {
-        proxy_pass http://frontend_upstream;
-        proxy_set_header Host $host;
-        # Repeated: nginx drops the server-level add_headers as soon as a
-        # location defines one of its own (see the note in the server block).
-        add_header X-Frame-Options "DENY" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
-    }
-
-    location ^~ /fonts/ {
-        proxy_pass http://frontend_upstream;
-        proxy_set_header Host $host;
-        # Repeated: nginx drops the server-level add_headers as soon as a
-        # location defines one of its own (see the note in the server block).
-        add_header X-Frame-Options "DENY" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
-    }
-
-    location ^~ /brand/ {
-        proxy_pass http://frontend_upstream;
-        proxy_set_header Host $host;
-        # Repeated: nginx drops the server-level add_headers as soon as a
-        # location defines one of its own (see the note in the server block).
-        add_header X-Frame-Options "DENY" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        add_header Cache-Control "public, max-age=86400" always;
-    }
-
-    location = /favicon.svg {
-        proxy_pass http://frontend_upstream;
-        proxy_set_header Host $host;
-        # Repeated: nginx drops the server-level add_headers as soon as a
-        # location defines one of its own (see the note in the server block).
-        add_header X-Frame-Options "DENY" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        add_header Cache-Control "public, max-age=86400" always;
-    }
-
-    location = /favicon.ico {
-        proxy_pass http://frontend_upstream;
-        proxy_set_header Host $host;
-        # Repeated: nginx drops the server-level add_headers as soon as a
-        # location defines one of its own (see the note in the server block).
-        add_header X-Frame-Options "DENY" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        add_header Cache-Control "public, max-age=86400" always;
-    }
-
-    location = /index.html {
-        proxy_pass http://frontend_upstream;
-        proxy_set_header Host $host;
-        # Repeated: nginx drops the server-level add_headers as soon as a
-        # location defines one of its own (see the note in the server block).
-        add_header X-Frame-Options "DENY" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        add_header Cache-Control "no-cache, must-revalidate" always;
-    }
-
-    # --- Storefront pages: Django owns the decision ----------------------
-    # Remaining page requests go to the catch-all view (apps/core/spa.py): a
-    # real page answers with the built index.html and status 200, anything
-    # else with the same Persian document and a REAL 404 (plus
-    # <meta name="robots" content="noindex">). nginx used to answer every
-    # path with the shell and status 200 -- a soft 404.
-    # Phases 1-3a: home, catalog (see above), auth, account, wishlist
-    # and the Next build output leave the SPA path; the
-    # cart/checkout/payment/info pages below still answer here.
-    location ~ ^/login/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/register/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/password-reset/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/reset-password(?:/.*)?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/account(?:/.*)?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/wishlist/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/cart/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/checkout/?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location ~ ^/payment/result(?:/.*)?$ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Host $http_host;
-    }
-
-    location = / {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    location ^~ /_next/ {
-        proxy_pass http://web:3000;
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
+    # --- Storefront: every page is the Next app ---------------------------
+    # Home, shop, product/brand pages, auth, account, wishlist, cart,
+    # checkout, payment result, the info pages and the unknown-path 404 are
+    # all server-rendered by Next: every visitor gets real HTML with real
+    # Open Graph/JSON-LD. Phase 5 folded the per-route `location ~ ...`
+    # blocks into this catch-all -- they were identical proxies to the same
+    # upstream, so one block routes exactly the same requests. The public
+    # files Next serves itself from web/public/ (/fonts/, /brand/,
+    # /favicon.svg, /favicon.ico) and the /_next/ build output need no
+    # locations of their own either.
     location / {
         proxy_pass http://web:3000;
         proxy_set_header Host $http_host;

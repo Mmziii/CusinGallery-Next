@@ -12,15 +12,15 @@
  *      address -> delivery method -> review, one step at a time, with the
  *      delivery choice visible right after the address.
  *
- * Requires the running stack (docs/E2E.md): Django + Vite, `seed_demo` data.
+ * Requires the running stack (docs/E2E.md): Django + Next, `seed_demo` data.
  *
  *   cd e2e && npx playwright test mobile-grid.spec.js --project=chromium
  *
  * The viewport is set INSIDE the spec (375x812 = iPhone-class), so the file
  * can run under any project. The optional 404 check needs the real edge
  * (nginx + Django); set E2E_EXPECT_REAL_404=1 when pointing E2E_BASE_URL at
- * the composed stack, otherwise it is skipped with a note -- the Vite dev
- * server answers every path with 200 by design.
+ * the composed stack, otherwise it is skipped with a note -- answering
+ * unknown slugs needs Django up behind the app.
  */
 const { test, expect } = require("@playwright/test");
 
@@ -298,7 +298,7 @@ test("unknown URLs are a real 404 at the edge (nginx + Django)", async ({ reques
   test.skip(
     process.env.E2E_EXPECT_REAL_404 !== "1",
     "Set E2E_EXPECT_REAL_404=1 when E2E_BASE_URL points at the composed stack " +
-      "(Vite's dev server answers every path with 200 by design)."
+      "(answering unknown slugs needs Django up behind the app)."
   );
 
   const home = await request.get("/");

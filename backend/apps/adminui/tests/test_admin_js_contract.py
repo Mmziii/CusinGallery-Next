@@ -1,7 +1,6 @@
 """Contract between the admin scripts and the rendered pages.
 
-The jsdom suites (frontend/src/admin-theme/*.test.js) execute the shipped
-scripts against fixtures. These tests assert that the REAL Django pages carry
+These tests assert that the REAL Django pages carry
 every id, class and data-attribute those scripts query, so the fixtures cannot
 drift away from what production renders. They also check that the scripts are
 actually included on those pages."""

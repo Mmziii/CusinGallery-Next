@@ -1,7 +1,7 @@
 # --- Environment files (never commit real secrets) ---------------------------
 .env
 backend/.env
-frontend/.env
+web/.env
 *.env.local
 
 # --- Python / Django -----------------------------------------------------------
@@ -36,11 +36,11 @@ backend/media/brands/*
 venv/
 *.egg-info/
 
-# --- Node / frontend --------------------------------------------------------------
-frontend/node_modules/
+# --- Node / storefront -----------------------------------------------------------
+web/node_modules/
+web/.next/
+web/out/
 e2e/node_modules/
-frontend/dist/
-frontend/.vite/
 npm-debug.log*
 
 # --- Docker / infra ------------------------------------------------------------------

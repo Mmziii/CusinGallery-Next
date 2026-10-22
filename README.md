@@ -108,11 +108,11 @@ cusin-gallery/
 │   │   ├── reviews/
 │   │   └── banners/       # banners + daily deals
 │   └── media/, staticfiles/
-├── frontend/              # React + Vite storefront (src/, tests: lint+build)
+├── web/                   # Next.js storefront (App Router, SSR -- see web/README.md)
 ├── docs/                  # OWNER_GUIDE.fa.md (Persian owner manual),
 │                          # PAYMENTS.md (developer payment guide),
 │                          # DEPLOY.md (Persian VPS deployment guide)
-├── docker/                # backend + frontend Dockerfiles (+ prod entrypoint)
+├── docker/                # backend Dockerfile (+ prod entrypoint)
 ├── nginx/                 # edge configs: conf.d (dev) + prod.d (TLS/HTTPS)
 ├── scripts/               # backup.sh / restore.sh (never store output in git)
 ├── docker-compose.yml     # development stack
@@ -151,22 +151,26 @@ Settings modules:
   HSTS gated behind `HTTPS_ENABLED=True`, shared **Redis** cache
   (`REDIS_URL`) so DRF throttling is global across gunicorn workers.
 
-## Frontend setup (development)
+## Storefront setup (development)
 
 ```bash
-cd frontend
-npm install
-npm run dev        # Vite dev server on :5173, proxies /api and /media to :8000
+cd web
+npm ci
+INTERNAL_API_URL=http://localhost:8000 npm run dev   # Next dev server on :3000
 ```
 
-The dev proxy (see `vite.config.js`) keeps the browser on a single
-origin, so session cookies and CSRF work with zero CORS configuration.
-Build for production with `npm run build`; lint with `npm run lint`
-(`eslint src --ext js,jsx`).
+The dev server reads Django through `INTERNAL_API_URL` (point it at your
+local backend on `:8000`, or at the compose backend). For the full stack
+exactly as it runs in production — nginx on `:80` routing `/api/` to
+Django and everything else to Next — use `docker compose up -d --build`
+from the repo root instead (see below).
 
-The API base URL defaults to the same-origin `/api/v1`. Set
-`VITE_API_BASE_URL` only if the API genuinely lives on another origin
-(it is a build-time variable — see `frontend/.env.example`).
+Build for production with `npm run build`; test with `npm test` (run the
+build first — the `*Http` suites start `next start` against a fake
+Django). The browser calls the same-origin `/api/v1` in all environments,
+so session cookies and CSRF work with zero CORS configuration. Storefront
+env vars (`SITE_ORIGIN`, `NEXT_PUBLIC_*`) are documented in `web/README.md`
+and the root `.env.example`.
 
 ---
 
@@ -206,9 +210,17 @@ codes; re-issue invalidation; identical generic answers for unknown
 phone / wrong / expired / consumed code; request throttling; production
 SMS boot guards).
 
-Frontend: no unit-test framework is configured; verification is via
-`npm run lint` (0 problems) and `npm run build`, plus exercising the
-running app against the live API.
+Storefront (`web/`, vitest):
+
+```bash
+cd web
+npm run build && npm test
+```
+
+Suites cover server rendering, shop paging, the proxy's 404 contract,
+auth guards/forms, purchase flows, responsive CSS and the nginx routing
+expectations; the `*Http` suites drive production `next start` against a
+`node:http` fake Django (no browser needed).
 
 System checks: `python manage.py check` and
 `python manage.py makemigrations --check --dry-run` are clean.
@@ -252,14 +264,14 @@ never moves stock — stock is only taken at payment).
 
 ## Docker / deployment wiring
 
-`docker-compose.yml` (development) defines: `postgres` (persistent volume +
-healthcheck), `redis` (shared cache for throttling), `backend`
-(gunicorn, runs `collectstatic` on start; migrations are run explicitly
-by the operator: `docker compose run backend python manage.py migrate`),
-`frontend` (Vite build served by an internal nginx), and `nginx` (the
-single edge proxy: `/api/` and `/admin/` → backend, `/static/` and
-`/media/` served directly from shared volumes, everything else →
-frontend).
+`docker-compose.yml` (development) defines: `db` (PostgreSQL, persistent
+volume + healthcheck), `redis` (shared cache for throttling), `backend`
+(gunicorn; migrations are run explicitly by the operator:
+`docker compose exec backend python manage.py migrate`), `web` (the
+Next.js storefront, SSR on `:3000`), and `nginx` (the single edge proxy:
+`/api/`, `/admin/`, `/payment/callback/`, `/healthz`, `/robots.txt` and
+`/sitemap.xml` → backend, `/static/` and `/media/` served directly from
+shared volumes, everything else → `web`).
 
 **`docker-compose.prod.yml` (production, Phase E)** adds everything a
 real deployment needs on top: nginx terminates **TLS via a Let's
@@ -318,7 +330,8 @@ operator:
 ## Environment variables
 
 See the two documented templates — **root `.env.example`** (compose-level:
-Postgres credentials, `VITE_API_BASE_URL`) and **`backend/.env.example`**
-(every backend setting: database, security, shipping costs/delivery
-windows, email, payment gateway, `FRONTEND_URL`, `REDIS_URL`). Real
-`.env` files are git-ignored and must never be committed.
+Postgres credentials, storefront origin, analytics, Sentry) and
+**`backend/.env.example`** (every backend setting: database, security,
+shipping costs/delivery windows, email, payment gateway, `FRONTEND_URL`,
+`REDIS_URL`). Real `.env` files are git-ignored and must never be
+committed.

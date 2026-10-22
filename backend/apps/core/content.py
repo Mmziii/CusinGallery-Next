@@ -9,9 +9,9 @@ Building it in one place has three benefits:
 * the result is cached once (Django cache) and invalidated by a post_save /
   post_delete signal on every contributing model, so a save in the admin is
   visible on the next page load without a restart;
-* the backend-rendered SPA shell can inline the theme variables from the
-  same cached payload, which is what makes the first paint use the owner's
-  colors (no flash of the old theme).
+* the Next root layout (web/app/layout.js) reads the theme variables
+  from the same cached payload, which is what makes the first paint use
+  the owner's colors (no flash of the old theme).
 
 Placeholders are filtered through ``placeholders.clean_value`` exactly like
 the old /site/settings/ endpoint: the seeded «+98 21 0000 0000» and any

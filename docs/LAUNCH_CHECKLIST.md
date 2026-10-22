@@ -112,10 +112,12 @@
       سپس `set DATABASE_URL=sqlite:///db.sqlite3` (PowerShell:
       `$env:DATABASE_URL="sqlite:///db.sqlite3"`)، بعد `python manage.py migrate`
       و `python manage.py runserver 8000`.
-- [ ] در پوشهٔ `frontend` (پنجرهٔ دوم ترمینال): `npm ci` و سپس `npm run dev`.
-- [ ] سایت روی **http://localhost:5173** باز شود (نه ۸۰۰۰) و صفحات اصلی، محصول و
-      سبد خرید بدون خطا نمایش داده شوند — سرور توسعهٔ Vite خودش `/api` را به
-      بک‌اند روی پورت ۸۰۰۰ می‌فرستد.
+- [ ] در پوشهٔ `web` (پنجرهٔ دوم ترمینال): `npm ci`، سپس
+      `set INTERNAL_API_URL=http://localhost:8000` (PowerShell:
+      `$env:INTERNAL_API_URL="http://localhost:8000"`) و بعد `npm run dev`.
+- [ ] سایت روی **http://localhost:3000** باز شود (نه ۸۰۰۰) و صفحات اصلی، محصول و
+      سبد خرید بدون خطا نمایش داده شوند — سرور توسعهٔ Next داده‌ها را سمت
+      سرور از بک‌اند روی پورت ۸۰۰۰ می‌خواند.
 - [ ] ورود به پنل مدیریت روی **http://localhost:8000/admin/** با کاربری که با
       `createsuperuser` ساخته‌اید کار کند.
 - [ ] بدانید این حالت فقط «نگاه سریع» است: پایگاه داده SQLite است و جای

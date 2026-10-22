@@ -2,9 +2,7 @@
 
 The customer is the name on one line and the Persian-digit phone on a
 second muted line, both ellipsised with the full value in ``title``;
-the payments list renders its customer/order cells the same way. The
-pixel-level widths are asserted via the real cascade in
-frontend/src/admin-theme/layoutCascade.test.js.
+the payments list renders its customer/order cells the same way.
 """
 import re
 

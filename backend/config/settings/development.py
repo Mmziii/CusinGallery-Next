@@ -29,10 +29,10 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 # header is simply absent.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# Permissive CORS locally so the Vite dev server (default: localhost:5173)
-# can talk to the API without needing exact origin configuration every time
-# a teammate uses a different port. Production is locked down instead --
-# see production.py.
+# Permissive CORS locally so the Next dev server (web/: `npm run dev`,
+# default localhost:3000) can talk to the API without needing exact
+# origin configuration every time a teammate uses a different port.
+# Production is locked down instead -- see production.py.
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Emails are printed to the console instead of actually sent, so no SMTP

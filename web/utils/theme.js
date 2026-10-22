@@ -1,12 +1,11 @@
 /**
  * Storefront theme application (Task 2).
  *
- * The production shell (backend/apps/core/spa.py) already inlines the
- * owner-selected CSS custom properties into <head>, so the first paint is
+ * The root layout (app/layout.js) already applies the owner-selected
+ * CSS custom properties before the first paint, so the first paint is
  * correct with no flash. This module:
  *
- *  1. applies the same variables when the SPA runs from Vite in dev, or on
- *     any page whose shell predates the marker;
+ *  1. applies the same variables on any page whose shell predates them;
  *  2. re-applies them when /site/content/ arrives (a stale cached shell
  *     after an admin save must not keep the old palette for the session).
  *

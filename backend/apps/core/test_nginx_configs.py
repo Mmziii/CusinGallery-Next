@@ -209,7 +209,7 @@ class NginxSecurityHeaderTests(SimpleTestCase):
     """The storefront shipped no X-Frame-Options / X-Content-Type-Options /
     Referrer-Policy at all, and nginx happily printed its own version.
 
-    Both are fixed at the edge, because the SPA's HTML never reaches
+    Both are fixed at the edge, because the Next app's HTML never reaches
     Django -- Django's own SECURE_* settings cannot cover it.
     """
 
@@ -263,8 +263,7 @@ class NginxSecurityHeaderTests(SimpleTestCase):
         `add_header` is inherited by a nested block ONLY when that block
         defines none of its own. Every location that sets Cache-Control
         therefore has to repeat the security headers, or a static asset
-        (or the SPA shell, via the frontend container's own headers) goes
-        out with no X-Frame-Options at all.
+        (or a storefront page) goes out with no X-Frame-Options at all.
         """
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
@@ -303,11 +302,15 @@ class NginxSecurityHeaderTests(SimpleTestCase):
             start = index + len(header)
 
     def test_storefront_catch_all_reaches_the_next_app(self):
-        """Phase 4: `location /` proxies the Next app (`http://web:3000`).
+        """Phase 5: `location /` is the ONLY Next route (`http://web:3000`).
 
-        Every storefront route (including owner-editable info pages and the
-        unknown-path 404) is now rendered by Next, while legacy SPA static
-        asset directories stay on `frontend_upstream` until phase 5 cleanup.
+        Every storefront page -- home, shop, product/brand pages, auth,
+        account, wishlist, cart, checkout, payment result, the info pages
+        and the unknown-path 404 -- is server-rendered by Next. The
+        per-route `location ~ ...` blocks, `location = /` and
+        `location ^~ /_next/` were folded into this catch-all: they were
+        identical proxies to the same upstream, so one block routes
+        exactly the same requests.
         """
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
@@ -321,123 +324,191 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                 self.assertIn("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", block)
                 self.assertIn("proxy_set_header X-Forwarded-Host $http_host;", block)
                 self.assertNotIn("proxy_pass http://backend_upstream;", block)
-                self.assertNotIn("proxy_pass http://frontend_upstream;", block)
-            for asset in ("/assets/", "/fonts/", "/brand/"):
-                with self.subTest(config=path.name, asset=asset):
-                    self.assertRegex(
-                        source,
-                        r"location \^~ " + asset + r" \{[^}]*frontend_upstream",
-                        f"{path.name}: the built bundle/fonts/brand files must be "
-                        f"served by the frontend container",
-                    )
-            for favicon in ("/favicon.svg", "/favicon.ico"):
-                with self.subTest(config=path.name, favicon=favicon):
-                    self.assertRegex(
-                        source,
-                        r"location = " + re.escape(favicon) + r" \{[^}]*frontend_upstream",
-                    )
-            with self.subTest(config=path.name, next_assets="/_next/"):
-                self.assertRegex(
-                    source,
-                    r"location \^~ /_next/ \{[^}]*http://web:3000",
+            # The fold is complete: no sibling location may proxy Next.
+            web_blocks = [
+                header for header, body in location_blocks(source)
+                if "http://web:3000" in body
+            ]
+            with self.subTest(config=path.name, check="single Next location"):
+                self.assertEqual(
+                    len(web_blocks), 1,
+                    f"{path.name}: expected exactly one web:3000 location, "
+                    f"found {web_blocks}",
+                )
+                self.assertTrue(
+                    web_blocks[0].strip() == "location /",
+                    f"{path.name}: the web:3000 location must be the "
+                    f"catch-all, found {web_blocks[0]!r}",
                 )
 
-    def test_catalog_pages_are_served_by_the_next_app(self):
-        """Phase 2: /shop/, /products/<slug>/ and /brands/<slug>/ are Next SSR.
+    def test_no_frontend_upstream_or_spa_locations_remain(self):
+        """Phase 5: the retired Vite app left no trace in any edge config.
 
-        Next answers every visitor with real HTML (titles, Open Graph,
-        JSON-LD), so the old crawler-only /seo/ rewrites were removed: a bot
-        must NOT be diverted to Django while a human gets something else. All
-        three paths therefore proxy the web container with the public Host and
-        the X-Forwarded-* chain (Django builds absolute media URLs for the
-        server-rendered page from those headers).
+        No `frontend_upstream`, no SPA static locations (/assets/, /fonts/,
+        /brand/, favicons, /index.html -- the kept files are served by Next
+        itself from web/public/ through the catch-all), no /seo/ proxy and
+        no per-route Next regex: the only regex location left anywhere is
+        the hashed-/static/ one.
         """
-        routes = ("^/shop/?$", "^/products/[^/]+/?$", "^/brands/[^/]+/?$",
-                  "^/login/?$", "^/register/?$", "^/password-reset/?$",
-                  "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$",
-                  "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$")
         for path in NGINX_FILES:
-            source = strip_comments(path.read_text(encoding="utf-8"))
-            for route in routes:
-                body = self._location_body(source, f"location ~ {route}")
-                with self.subTest(config=path.name, route=route):
-                    self.assertIsNotNone(body, f"{path.name}: no location for {route}")
-                    self.assertIn("proxy_pass http://web:3000;", body)
-                    self.assertIn("proxy_set_header Host $http_host;", body)
-                    self.assertIn("proxy_set_header X-Forwarded-Proto $scheme;", body)
-                    self.assertIn("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", body)
-                    self.assertNotIn("backend_upstream", body)
-                    self.assertNotIn("frontend_upstream", body)
-            # The bot-only diversion is gone from every stack (only the explicit
-            # `location /seo/` backend block remains until phase 5).
-            with self.subTest(config=path.name, block="crawler map"):
-                self.assertNotIn("$cusin_is_bot", source)
+            raw = path.read_text(encoding="utf-8")
+            source = strip_comments(raw)
+            with self.subTest(config=path.name):
+                self.assertNotIn("frontend_upstream", raw)
+                for needle in ("frontend", "/seo/", "/assets/", "/fonts/",
+                               "/brand/", "favicon", "index.html",
+                               "$cusin_is_bot"):
+                    self.assertNotIn(
+                        needle, source,
+                        f"{path.name}: retired SPA artifact {needle!r} "
+                        f"is still routed",
+                    )
                 self.assertNotRegex(source, r"rewrite\s+[^\n]*/seo/")
+                for header, _body in location_blocks(source):
+                    spec = header[len("location"):].strip()
+                    if not spec.startswith("~"):
+                        continue
+                    pattern = spec[2:].strip() if spec.startswith("~*") else spec[1:].strip()
+                    with self.subTest(config=path.name, location=header):
+                        self.assertTrue(
+                            pattern.strip("\"'").startswith("^/static/"),
+                            f"{path.name}: unexpected regex location "
+                            f"{header!r} -- the per-route Next blocks were "
+                            f"folded into the catch-all, so only the "
+                            f"hashed-/static/ pattern may remain",
+                        )
 
-    def test_auth_account_wishlist_keep_public_host_and_backend_routes(self):
-        """Phase 3-4: storefront routes go to Next; every Django path stays on backend/volumes."""
-        protected_django_samples = (
-            "/api/",
-            "/api/v1/products/",
-            "/admin/",
-            "/admin/login/",
+    @staticmethod
+    def _storefront_locations(source):
+        """``[(spec, body)]`` of the server block that serves the shop.
+
+        prod.d/cusin.conf holds two servers (the :80 one only redirects);
+        the storefront server is the one whose catch-all proxies.
+        """
+        servers = list(server_blocks(source))
+        if len(servers) == 1:
+            return [
+                (header[len("location"):].strip(), body)
+                for header, body in location_blocks(servers[0][0])
+            ]
+        for block, _tls in servers:
+            locations = [
+                (header[len("location"):].strip(), body)
+                for header, body in location_blocks(block)
+            ]
+            if any(spec == "/" and "proxy_pass" in body for spec, body in locations):
+                return locations
+        raise AssertionError("no proxying server block found")
+
+    @staticmethod
+    def _nginx_winner(locations, uri):
+        """Which location body nginx would serve ``uri`` from.
+
+        Exact `=` first, then the longest plain/`^~` prefix (`^~` stops
+        the search), then regex locations in config order, else the
+        longest prefix. Mirrors web/tests/phase4.test.jsx's matcher.
+        """
+        for spec, body in locations:
+            if spec.startswith("=") and uri == spec[1:].strip():
+                return body
+        best = None
+        best_len = -1
+        best_no_regex = False
+        for spec, body in locations:
+            if spec.startswith(("=", "~")):
+                continue
+            no_regex = spec.startswith("^~")
+            prefix = spec[2:].strip() if no_regex else spec.strip()
+            if uri.startswith(prefix) and len(prefix) > best_len:
+                best, best_len, best_no_regex = body, len(prefix), no_regex
+        if best is not None and best_no_regex:
+            return best
+        for spec, body in locations:
+            if not spec.startswith("~"):
+                continue
+            insensitive = spec.startswith("~*")
+            pattern = spec[2 if insensitive else 1:].strip().strip("\"'")
+            flags = re.IGNORECASE if insensitive else 0
+            if re.search(pattern, uri, flags):
+                return body
+        return best
+
+    def test_effective_routing_sends_storefront_to_next_and_django_paths_to_backend(self):
+        """End-to-end routing: every URL lands on the right upstream."""
+        next_urls = (
+            "/",
+            "/shop/", "/shop",
+            "/products/copper-pot/", "/products/copper-pot",
+            "/brands/zarin/",
+            "/login/", "/register/", "/password-reset/",
+            "/reset-password/confirm/", "/account/", "/account/orders/3/",
+            "/wishlist/", "/cart/", "/checkout/",
+            "/payment/result/", "/payment/result/42/",
+            "/about/", "/contact/", "/shipping-returns/", "/terms/",
+            "/privacy/", "/some/unknown/path/", "/about-x/",
+            "/_next/static/chunks/main.js",
+            # Kept public files, served by Next from web/public/.
+            "/fonts/vazirmatn-arabic-wght-normal.woff2",
+            "/brand/og.png", "/favicon.svg", "/favicon.ico",
+        )
+        django_urls = (
+            "/api/", "/api/v1/products/",
+            "/admin/", "/admin/login/",
             "/admin/products/product/image-import/",
             "/payment/callback/",
+            "/healthz", "/robots.txt", "/sitemap.xml",
         )
         for path in NGINX_FILES:
+            locations = self._storefront_locations(
+                strip_comments(path.read_text(encoding="utf-8")))
+            for url in next_urls:
+                with self.subTest(config=path.name, url=url):
+                    self.assertIn(
+                        "proxy_pass http://web:3000;",
+                        self._nginx_winner(locations, url) or "",
+                        f"{path.name}: {url} must reach the Next app",
+                    )
+            for url in django_urls:
+                with self.subTest(config=path.name, url=url):
+                    self.assertIn(
+                        "proxy_pass http://backend_upstream;",
+                        self._nginx_winner(locations, url) or "",
+                        f"{path.name}: {url} must reach the backend",
+                    )
+            with self.subTest(config=path.name, url="/static/…"):
+                self.assertIn(
+                    "alias /app/staticfiles/",
+                    self._nginx_winner(locations, "/static/admin/css/base.css") or "",
+                )
+            with self.subTest(config=path.name, url="/media/…"):
+                self.assertIn(
+                    "alias /app/media/",
+                    self._nginx_winner(locations, "/media/products/pot.jpg") or "",
+                )
+
+    def test_django_paths_stay_on_the_backend_in_every_config(self):
+        """Structural twin of the routing test: each Django location block
+        proxies the backend upstream and never the Next app."""
+        for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
-            for route in ("^/login/?$", "^/register/?$", "^/password-reset/?$",
-                          "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$",
-                          "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$"):
-                body = self._location_body(source, f"location ~ {route}")
-                with self.subTest(config=path.name, route=route):
-                    self.assertIsNotNone(body)
-                    self.assertIn("proxy_set_header X-Forwarded-Host $http_host;", body)
-                    self.assertIn("proxy_set_header X-Real-IP $remote_addr;", body)
-                    self.assertNotRegex("/payment/callback/", route)
-
-            # No Next regex or non-root prefix location may match /api/, /admin/, or /payment/callback/.
-            for header, body in location_blocks(source):
-                if "http://web:3000" not in body:
-                    continue
-                spec = header[len("location"):].strip()
-                if spec in ("/", "= /"):
-                    continue
-                with self.subTest(config=path.name, next_location=header):
-                    if spec.startswith("~*"):
-                        pattern = spec[2:].strip().strip("\"'")
-                        for sample in protected_django_samples:
-                            self.assertIsNone(re.search(pattern, sample, re.IGNORECASE))
-                    elif spec.startswith("~"):
-                        pattern = spec[1:].strip().strip("\"'")
-                        for sample in protected_django_samples:
-                            self.assertIsNone(re.search(pattern, sample))
-                    else:
-                        prefix = spec.lstrip("^~").strip()
-                        for sample in protected_django_samples:
-                            self.assertFalse(sample.startswith(prefix))
-
-            for route in ("/api/", "/admin/", "/payment/callback/", "/seo/"):
+            for route in ("/api/", "/admin/", "/payment/callback/"):
                 body = self._location_body(source, f"location {route}")
                 with self.subTest(config=path.name, route=route):
                     self.assertIsNotNone(body, f"{path.name}: missing `location {route}`")
                     self.assertIn("backend_upstream", body)
                     self.assertNotIn("web:3000", body)
-
             for exact in ("/healthz", "/robots.txt", "/sitemap.xml"):
                 body = self._location_body(source, f"location = {exact}")
                 with self.subTest(config=path.name, route=exact):
                     self.assertIsNotNone(body, f"{path.name}: missing `location = {exact}`")
                     self.assertIn("backend_upstream", body)
                     self.assertNotIn("web:3000", body)
-
             for static_dir, alias_dir in (("/static/", "/app/staticfiles/"), ("/media/", "/app/media/")):
                 body = self._location_body(source, f"location {static_dir}", want="alias")
                 with self.subTest(config=path.name, route=static_dir):
                     self.assertIsNotNone(body, f"{path.name}: missing `location {static_dir}`")
                     self.assertIn(f"alias {alias_dir};", body)
                     self.assertNotIn("web:3000", body)
-
         for path in (NGINX_ROOT / "conf.d" / "cusin.conf", NGINX_ROOT / "prod.d" / "cusin.conf"):
             source = strip_comments(path.read_text(encoding="utf-8"))
             body = self._location_body(source, "location ^~ /admin/products/product/image-import/")
@@ -446,8 +517,11 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                 self.assertIn("backend_upstream", body)
                 self.assertNotIn("web:3000", body)
 
-    def test_seo_routes_reach_the_backend_in_every_config(self):
-        """/robots.txt, /sitemap.xml and /seo/ are rendered by Django, not Next."""
+    def test_seo_files_reach_the_backend_and_no_seo_location_remains(self):
+        """/robots.txt and /sitemap.xml are rendered by Django, not Next --
+        and the retired /seo/ crawler endpoints (Phase 5) are gone from
+        every config, since Next serves real HTML to bots and humans alike.
+        """
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             for route in ("/robots.txt", "/sitemap.xml"):
@@ -458,8 +532,8 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                         f"{path.name}: {route} must be proxied to the backend",
                     )
             with self.subTest(config=path.name, route="/seo/"):
-                self.assertRegex(
+                self.assertNotRegex(
                     source,
-                    r"location\s+/seo/\s*\{[^}]*backend_upstream",
-                    f"{path.name}: /seo/ must be proxied to the backend",
+                    r"location\s+/seo/",
+                    f"{path.name}: the retired /seo/ location must be gone",
                 )

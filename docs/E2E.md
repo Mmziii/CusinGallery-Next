@@ -4,7 +4,7 @@
 
 ## نصب ابزار مرورگر
 
-وابستگی Playwright جدا از وابستگی‌های Vite نگه داشته شده است:
+وابستگی Playwright جدا از وابستگی‌های Next نگه داشته شده است:
 
 ```bash
 cd e2e
@@ -26,19 +26,19 @@ python manage.py seed_demo
 python manage.py runserver 0.0.0.0:8000
 ```
 
-ترمینال دوم — فرانت‌اند و پراکسی `/api` به بک‌اند:
+ترمینال دوم — فروشگاه Next (خواندن داده از بک‌اند):
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd web
+npm ci
+INTERNAL_API_URL=http://localhost:8000 npm run dev
 ```
 
 اجرای جریان‌های فروشگاه (صفحهٔ اصلی، سبد مهمان، ثبت‌نام، سه روش ارسال و پرداخت mock):
 
 ```bash
 cd e2e
-E2E_BASE_URL=http://localhost:5173 npm test -- --project=chromium
+E2E_BASE_URL=http://localhost:3000 npm test -- --project=chromium
 ```
 
 برای آزمون کد تخفیف، `E2E_COUPON` را با کد فعال تنظیم کنید. بدون آن، فقط گام کد تخفیف رد می‌شود. این آزمون یک حساب تازه با شمارهٔ آزمایشی می‌سازد؛ از پایگاه‌دادهٔ توسعه استفاده کنید، نه دادهٔ مشتریان واقعی.
@@ -47,14 +47,14 @@ E2E_BASE_URL=http://localhost:5173 npm test -- --project=chromium
 
 ```bash
 cd e2e
-E2E_BASE_URL=http://localhost:5173 npx playwright test --project=mobile-pixel
+E2E_BASE_URL=http://localhost:3000 npx playwright test --project=mobile-pixel
 
 آزمون موبایل (Audit 19) — اندازه‌گیری واقعی گرید دو ستونه، سرریز افقی، نوار چسبان
 فیلتر/مرتب‌سازی، مرحلهٔ «روش ارسال» در تسویه‌حساب موبایل و چرخهٔ رمز عبور:
 
 ```bash
 cd e2e
-E2E_BASE_URL=http://localhost:5173 npx playwright test mobile-grid.spec.js --project=chromium
+E2E_BASE_URL=http://localhost:3000 npx playwright test mobile-grid.spec.js --project=chromium
 ```
 
 بررسی ۴۰۴ واقعی فقط روی پشتهٔ کامل (nginx + Django) معنا دارد؛ برای آن:
@@ -62,7 +62,7 @@ E2E_BASE_URL=http://localhost:5173 npx playwright test mobile-grid.spec.js --pro
 ```bash
 E2E_BASE_URL=https://cusin.ir E2E_EXPECT_REAL_404=1 npx playwright test mobile-grid.spec.js --project=chromium
 ```
-E2E_BASE_URL=http://localhost:5173 npx playwright test --project=mobile-iphone
+E2E_BASE_URL=http://localhost:3000 npx playwright test --project=mobile-iphone
 ```
 
 ## آزمون پنل مدیریت

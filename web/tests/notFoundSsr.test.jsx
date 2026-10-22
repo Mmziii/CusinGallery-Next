@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * Next 16.4 answers `notFound()` with status 404 and an EMPTY document — the
  * Persian 404 only arrives in the RSC payload, i.e. after hydration (see
  * vercel/next.js#99287). `proxy.js` therefore asks Django whether the slug
- * exists and, for a missing one, rewrites to `/not-found-page/` with the 404
+ * exists and, for a missing one, rewrites to `/_not-found/` with the 404
  * status kept. These tests pin that contract and the content of the document
  * it rewrites to, so the header/footer and the Persian text cannot silently
  * drop out of the first response again.
@@ -43,8 +43,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { config, proxy } from "../proxy";
-import NotFound from "../app/not-found";
-import NotFoundRoute, { metadata as notFoundPageMetadata } from "../app/not-found-page/page";
+import NotFound, { metadata as notFoundMetadata } from "../app/not-found";
 import MainLayout from "../layouts/MainLayout";
 
 const requestFor = (pathname, headers = {}) =>
@@ -184,19 +183,18 @@ describe("proxy: catalog slugs that Django says are gone", () => {
 });
 
 describe("the document the rewrite renders", () => {
-  it("is the same Persian 404 as the framework boundary", () => {
-    const html = renderToStaticMarkup(<NotFoundRoute />);
+  it("is the Persian 404 with the home link", () => {
+    const html = renderToStaticMarkup(<NotFound />);
 
-    expect(html).toBe(renderToStaticMarkup(<NotFound />));
     expect(html).toContain("۴۰۴");
     expect(html).toContain("صفحه مورد نظر پیدا نشد؛ شاید نشانی عوض شده است.");
     expect(html).toContain('href="/"');
   });
 
   it("carries «یافت نشد» and is noindex", () => {
-    expect(notFoundPageMetadata.title).toContain("یافت نشد");
+    expect(notFoundMetadata.title).toContain("یافت نشد");
     // noindex AND nofollow: a 404 must never invite a crawl of the dead URL.
-    expect(notFoundPageMetadata.robots).toEqual({ index: false, follow: false });
+    expect(notFoundMetadata.robots).toEqual({ index: false, follow: false });
   });
 
   it("is rendered inside the storefront shell, so the server HTML has the header", () => {

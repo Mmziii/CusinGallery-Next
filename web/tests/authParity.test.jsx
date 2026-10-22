@@ -18,23 +18,15 @@ import OrderDetailPage from "../auth/account/OrderDetailPage";
 import { ErrorState, errorMessage } from "../components/ui";
 
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8");
-function normalize(source) {
-  return source.replace(/^"use client";\n/, "")
-    .replace(/import \{ usePageMeta \} from [^;]+;\n/g, "")
-    .replace(/^  usePageMeta\([^\n]+\);\n/gm, "")
-    .replace(/from "(?:\.\.\/)+lib\/navigation"/g, 'from "react-router-dom"');
-}
-it.each(["PasswordResetRequestPage", "PasswordResetConfirmPage", "WishlistPage", "account/ProfilePage", "account/OrdersPage", "account/OrderDetailPage", "account/AddressesPage", "account/ReviewsPage"])("%s retains EXACT SPA markup, texts and behavior except routing/metadata", name => {
-  expect(normalize(read(`../auth/${name}.jsx`))).toBe(normalize(read(`../../frontend/src/pages/${name}.jsx`)));
-});
-it.each(["PasswordInput", "PasswordHint", "AddressForm", "ConfirmDialog", "SearchCombobox"])("%s is the original SPA component", name => {
-  expect(normalize(read(`../components/${name}.jsx`))).toBe(normalize(read(`../../frontend/src/components/${name}.jsx`)));
-});
-it("another user's order (Django 404) renders the same SPA not-found/error view", () => {
+// NOTE (Phase 5): the pre-migration parity suites that diffed these pages
+// against the retired Vite sources were removed with the retired Vite app; the pages
+// below are the storefront now, and their markup is pinned by the HTTP
+// tests (authHttp.test.jsx) instead.
+it("another user's order (Django 404) renders the not-found/error view", () => {
   const html = renderToStaticMarkup(<OrderDetailPage />);
   const originalView = renderToStaticMarkup(<ErrorState message={errorMessage(asyncState.error)} onRetry={asyncState.refetch} />);
   expect(html).toBe(originalView);
-  // The SPA passes the raw Axios error to errorMessage, whose fallback is
+  // The raw Axios error goes to errorMessage, whose fallback is
   // intentionally retained rather than replacing this with a new design.
   expect(html).toContain("خطایی رخ داد. دوباره تلاش کنید.");
 });
@@ -76,12 +68,16 @@ it("storefront info and purchase routes use router push/replace while Django pat
     expect(assign).toHaveBeenCalledWith("/payment/callback/?Authority=A000");
   } finally { vi.unstubAllGlobals(); }
 });
-it.each(["conf.d/cusin.conf", "prod.d/cusin.conf", "prod.d/00-bootstrap-http.conf.example"])("nginx %s routes storefront catch-all and phase 3a/3b to Next and keeps Django API/admin/callback/seo", file => {
+it.each(["conf.d/cusin.conf", "prod.d/cusin.conf", "prod.d/00-bootstrap-http.conf.example"])("nginx %s routes the storefront catch-all to Next and keeps Django API/admin/callback", file => {
   const text = read(`../../nginx/${file}`);
-  for (const route of ["^/login/?$", "^/register/?$", "^/password-reset/?$", "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$", "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$"]) {
-    const body = text.split(`location ~ ${route} {`)[1]?.split("}")[0];
-    expect(body).toBeTruthy();
-    for (const directive of ["proxy_pass http://web:3000;", "proxy_set_header Host $http_host;", "proxy_set_header X-Forwarded-Host $http_host;", "proxy_set_header X-Forwarded-Proto $scheme;", "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"]) expect(body).toContain(directive);
-  }
-  for (const route of ["/api/", "/admin/", "/payment/callback/", "/seo/"]) expect(text.split(`location ${route} {`)[1]?.split("}")[0]).toContain("backend_upstream");
+  // Phase 5: the per-route `location ~ ...` Next blocks were folded into
+  // the catch-all (identical proxies), and the retired /seo/ block is gone.
+  expect(text).not.toMatch(/location ~ \^\/(login|register|password-reset|reset-password|account|wishlist|cart|checkout|payment\/result|shop|products|brands)\//);
+  expect(text).not.toContain("location /seo/ {");
+  // The match skips the :80 redirect twin (no proxy_pass) and the
+  // commented HTTPS example (no web:3000 there either).
+  const catchAll = text.match(/location \/ \{[^}]*proxy_pass http:\/\/web:3000;[^}]*\}/)?.[0];
+  expect(catchAll).toBeTruthy();
+  for (const directive of ["proxy_pass http://web:3000;", "proxy_set_header Host $http_host;", "proxy_set_header X-Forwarded-Host $http_host;", "proxy_set_header X-Forwarded-Proto $scheme;", "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"]) expect(catchAll).toContain(directive);
+  for (const route of ["/api/", "/admin/", "/payment/callback/"]) expect(text.split(`location ${route} {`)[1]?.split("}")[0]).toContain("backend_upstream");
 });

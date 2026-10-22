@@ -2,7 +2,7 @@
  * Cusin Gallery end-to-end flows (Part R3).
  *
  * NOT part of `npm test` or `manage.py test`. Drives a real browser against
- * the running stack (Django backend + Vite frontend, PAYMENT_GATEWAY=mock).
+ * the running stack (Django backend + Next storefront, PAYMENT_GATEWAY=mock).
  * Bring-up instructions: docs/E2E.md.
  *
  * Flows covered:

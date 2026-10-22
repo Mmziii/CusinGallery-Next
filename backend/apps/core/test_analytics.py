@@ -1,11 +1,9 @@
 """
 Analytics scoping tests (Part 4): the optional analytics snippet lives
-only in the storefront SPA bundle (frontend/src/components/Analytics
-mounts it when the build env is configured). Server-rendered surfaces --
-Django admin, the payment callback redirect and the customer invoice --
-must never carry it, so analytics can't leak into admin or PSP-facing
-pages. The frontend counterpart (env unset => nothing loads, DNT
-respected) is covered by frontend/src/Analytics.test.jsx.
+only in the Next.js storefront (web/components/Analytics mounts it when
+the build env is configured). Server-rendered surfaces -- Django admin,
+the payment callback redirect and the customer invoice -- must never
+carry it, so analytics can't leak into admin or PSP-facing pages.
 """
 from django.test import TestCase, override_settings
 from django.urls import reverse

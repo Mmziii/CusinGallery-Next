@@ -3,7 +3,9 @@
 The RelatedObjectLookups "+" buttons open ``/admin/...?_popup=1`` in an
 in-page iframe. The global ``X_FRAME_OPTIONS`` is DENY (production, and
 Django's default), which left that iframe blank; admin responses must be
-``SAMEORIGIN`` instead, while the storefront and the API stay DENY.
+``SAMEORIGIN`` instead, while the API and Django's other public pages
+stay DENY. (Storefront pages are rendered by the Next app, which the
+edge serves with its own DENY -- Django never sees them.)
 
 Also covers the nginx side: the edge proxies Django's header untouched,
 so the admin location must hide the conflicting value and send exactly
@@ -102,8 +104,10 @@ class AdminFrameHeaderTests(CacheIsolatedAPITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["X-Frame-Options"], "SAMEORIGIN")
 
-    def test_storefront_page_stays_deny(self):
-        response = self.client.get("/")
+    def test_public_django_page_stays_deny(self):
+        # Phase 5: Django renders no storefront pages anymore (Next does),
+        # so the non-admin DENY pin moved to a page Django still serves.
+        response = self.client.get("/robots.txt")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["X-Frame-Options"], "DENY")
 

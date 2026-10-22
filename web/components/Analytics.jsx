@@ -4,12 +4,12 @@ import { useEffect } from "react";
 /**
  * Optional privacy-friendly analytics (Part 4).
  *
- * Controlled entirely by build env (VITE_ANALYTICS_SCRIPT_URL /
- * VITE_ANALYTICS_SITE_ID, wired from ANALYTICS_* in compose): unset ->
- * this component renders NOTHING and no request is made. It sets no
- * cookies of its own, respects Do Not Track, and only ever mounts in
- * the storefront SPA -- the Django admin and the payment callback
- * pages are server-rendered templates that never include it.
+ * Controlled entirely by build env (NEXT_PUBLIC_ANALYTICS_SCRIPT_URL /
+ * NEXT_PUBLIC_ANALYTICS_SITE_ID, wired from ANALYTICS_* in compose):
+ * unset -> this component renders NOTHING and no request is made. It
+ * sets no cookies of its own, respects Do Not Track, and only ever
+ * mounts in the storefront -- the Django admin and the payment
+ * callback pages are server-rendered templates that never include it.
  *
  * Works with any Plausible/Matomo-style snippet that reads
  * data-domain; the store owner picks the provider in DEPLOY.md.
