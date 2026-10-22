@@ -3,16 +3,16 @@
  *
  * This suite is INTENTIONALLY NOT part of `npm test` (vitest). It drives a
  * real browser against a fully running stack -- the Django backend AND the
- * built/served frontend -- so it needs both up first. See docs/E2E.md for
- * the exact bring-up commands.
+ * Next storefront (dev server or production build) -- so it needs both up
+ * first. See docs/E2E.md for the exact bring-up commands.
  *
- * Point it at your running app with E2E_BASE_URL (defaults to the Vite dev
- * server). When the backend is same-origin (recommended), no extra env is
- * needed; the frontend proxies /api to the backend in dev.
+ * Point it at your running app with E2E_BASE_URL (defaults to the Next dev
+ * server). When the backend is same-origin behind nginx (recommended), no
+ * extra env is needed.
  */
 const { defineConfig, devices } = require("@playwright/test");
 
-const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:5173";
+const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
 
 module.exports = defineConfig({
   testDir: __dirname,

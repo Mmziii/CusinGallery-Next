@@ -4,7 +4,7 @@ import PropTypes from "prop-types";
 
 /**
  * Consistent "no image" placeholder (Part R1): light warm-grey field with
- * the owner's brand mark (frontend/public/brand/mark.svg, used as a CSS mask
+ * the owner's brand mark (web/public/brand/mark.svg, used as a CSS mask
  * so the file itself is never modified) centered in brand olive green at
  * reduced opacity. The wrapper fills whatever IMAGE AREA the caller reserves
  * (same aspect ratio as real images) so the layout never shifts.

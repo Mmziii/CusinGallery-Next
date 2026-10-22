@@ -10,10 +10,8 @@ Two layers, both checked here:
     inline end of the field;
   * ``theme.js`` enhances every OTHER password input of the panel (the
     password-change form, the reset-confirm form, the user change form), and
-    ``theme.css`` styles the control. The behaviour itself is pinned by the
-    vitest suite, which runs the real theme.js in a DOM
-    (frontend/src/admin-theme/passwordToggle.test.js) -- here we assert the
-    shipped assets really contain the pieces the login page relies on.
+    ``theme.css`` styles the control. Here we assert the shipped assets
+    really contain the pieces the login page relies on.
 """
 from pathlib import Path
 

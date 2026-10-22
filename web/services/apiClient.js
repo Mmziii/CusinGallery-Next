@@ -12,10 +12,10 @@ import { getSessionKey } from "../utils/behaviour";
  * use JWT), so the only client-side requirement is: read the csrftoken
  * cookie and send it back as the X-CSRFToken header on unsafe methods.
  *
- * VITE_API_BASE_URL must be set at build time (see frontend/.env.example).
- * Falls back to a same-origin relative path so local development works
- * even before .env is configured, matching the Nginx reverse-proxy
- * layout used in production (see nginx/conf.d/cusin.conf).
+ * The API is same-origin: the browser calls /api/v1 relatively and nginx
+ * routes it to the backend (see nginx/conf.d/cusin.conf), so no
+ * build-time base URL is needed and session cookies/CSRF need no
+ * cross-origin configuration.
  */
 const apiClient = axios.create({
   baseURL: "/api/v1" || "/api/v1",

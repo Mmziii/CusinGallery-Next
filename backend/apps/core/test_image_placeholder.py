@@ -4,9 +4,9 @@ the printable invoice) use the SAME shared placeholder as the storefront
 (brand mark on the warm-grey field, olive at .35 opacity), and a broken
 file degrades through an onerror swap instead of a broken-image icon.
 
-The storefront half of this item is covered by
-frontend/src/components/SmartImage.test.jsx and the source guard in
-frontend/src/assets.guard.test.js.
+The storefront half of this item lives in web/components/SmartImage.jsx
+(the same warm-grey field + brand mark) and is pinned by
+web/tests/storefrontAudit.test.jsx.
 """
 from django.test import TestCase, override_settings
 
@@ -39,7 +39,7 @@ class PlaceholderMarkupTests(TestCase):
         html = str(placeholder_html(48, 48))
         self.assertIn("#efece4", html)              # warm-grey field
         self.assertIn("#637037", html)              # --brand-green
-        self.assertIn("0.35", html)                 # same opacity as the SPA
+        self.assertIn("0.35", html)                 # same opacity as the storefront
         self.assertIn("/brand/mark.svg", html)      # the owner's mark, reused
         self.assertIn('aria-label="بدون تصویر"', html)
 

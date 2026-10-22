@@ -36,7 +36,7 @@ class ErrorBoundary extends Component {
     // Visible in the owner's devtools; the user sees the friendly page.
     console.error("render error caught by ErrorBoundary:", error, info?.componentStack);
     // Part S3 item 9: forward to the backend capture endpoint (no-op
-    // unless VITE_SENTRY_DSN was set at build time).
+    // unless NEXT_PUBLIC_SENTRY_DSN was set at build time).
     reportFrontendError({
       message: error?.message || String(error),
       component: info?.componentStack?.split("\n").find(Boolean)?.trim() || null,

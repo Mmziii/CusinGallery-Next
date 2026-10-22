@@ -169,7 +169,7 @@ def make_responsive_variants(source_field):
 # Part S4 item 1: ONE placeholder markup for Django-rendered surfaces.
 # ---------------------------------------------------------------------------
 # Every storefront surface renders images through the shared SmartImage
-# component (frontend/src/components/SmartImage.jsx), which falls back to
+# component (web/components/SmartImage.jsx), which falls back to
 # the brand mark on the warm-grey field. The Django-rendered surfaces --
 # the admin product list/inline thumbnails and the printable invoice --
 # use the markup below instead, with the SAME field colour (#efece4), the

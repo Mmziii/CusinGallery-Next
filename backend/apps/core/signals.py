@@ -1,7 +1,7 @@
 """Invalidate the cached public site payload whenever its source changes.
 
 Deliberately signal-based rather than scattered ``cache.delete`` calls in
-each admin: the public API, the inlined theme variables in the SPA shell and
+each admin: the public API, the inlined theme variables in the Next layout and
 the info-page endpoint all read the same cache entries, and EVERY write path
 (admin form, inline trust items, management command, shell) must invalidate
 them. ``post_delete`` matters as much as ``post_save`` -- deleting an info

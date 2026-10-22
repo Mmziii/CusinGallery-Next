@@ -25,12 +25,11 @@ proxied to the backend by the nginx configs):
                       shop page filters by query string), and sitemaps
                       should only list canonical, indexable pages.
 
-Honest SEO note: this is a client-rendered SPA, so per-product Open
-Graph tags cannot be seen by social crawlers that don't execute JS --
-the frontend sets document titles/meta/canonicals at runtime (good for
-Google, which renders JS) and index.html carries the site-wide OG
-defaults. Server-rendered per-product OG/prerendering is a documented
-future improvement, not something silently half-done here.
+SEO note: every storefront page is server-rendered by the Next app
+(web/), so crawlers and link unfurlers get real per-page titles,
+canonicals, Open Graph tags and JSON-LD in the first response -- no
+JavaScript needed. This module only serves the crawler infrastructure
+(robots.txt, sitemap.xml) that stays on Django.
 """
 import logging
 from xml.sax.saxutils import escape
@@ -48,9 +47,10 @@ from .serializers import SiteSettingsSerializer
 
 logger = logging.getLogger("django")
 
-#: Static storefront pages (routes in frontend/src/App.jsx) with their
-#: sitemap priorities/change frequencies. Kept here (backend) because the
-#: sitemap is served by Django; if a route is renamed, update both.
+#: Static storefront pages (routes of the Next app in web/app/) with
+#: their sitemap priorities/change frequencies. Kept here (backend)
+#: because the sitemap is served by Django; if a route is renamed,
+#: update both.
 STATIC_SITEMAP_PAGES = [
     ("", "1.0", "daily"),            # home
     ("/shop/", "0.9", "daily"),      # catalog
@@ -100,7 +100,7 @@ def sitemap_xml(request):
     base = settings.FRONTEND_URL.rstrip("/")
     urls = []
     # An unpublished info page must not be advertised to crawlers (its URL
-    # answers 404 -- see apps/core/spa.py), so it is skipped here too.
+    # answers 404 from the Next app), so it is skipped here too.
     info_paths = {
         "/about/": "about",
         "/contact/": "contact",
@@ -201,8 +201,8 @@ class ReportFrontendErrorView(APIView):
     """
     Part S3 item 9: capture endpoint for storefront error reports.
 
-    The frontend ships WITHOUT a Sentry SDK (no heavy dependency); when
-    VITE_SENTRY_DSN is set at build time the ErrorBoundary/window error
+    The storefront ships WITHOUT a Sentry SDK (no heavy dependency); when
+    NEXT_PUBLIC_SENTRY_DSN is set at build time the ErrorBoundary/window error
     handler POSTs a short report here, and THIS view forwards it into the
     existing backend Sentry setup (settings.SENTRY_DSN + sentry_sdk).
     Both gates must be open for data to leave the browser: no frontend

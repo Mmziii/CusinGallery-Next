@@ -171,7 +171,9 @@ beforeAll(async () => {
   const deadline = Date.now() + 25_000;
   while (Date.now() < deadline) {
     try {
-      await httpGet("/not-found-page/");
+      // A static public file: proves the server is up without warming
+      // any page/API cache the tests below assert against.
+      await httpGet("/favicon.svg");
       return;
     } catch {
       await new Promise((r) => setTimeout(r, 150));

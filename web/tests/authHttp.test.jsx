@@ -1,6 +1,5 @@
 import http from "node:http";
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { beforeAll, afterAll, beforeEach, expect, it } from "vitest";
 import { safeNext } from "../lib/auth-navigation";
 
@@ -135,15 +134,4 @@ it("reset confirm retains link-mode uid/token and SMS-mode mode=code&phone", asy
   expect(sms.body).toContain('value="09123456789"');
   const broken = await get("/reset-password/confirm/?uid=only-uid");
   expect(broken.body).toContain("لینک بازیابی معتبر نیست.");
-});
-it("SPA guard uses document navigation and URL-encoded path+query (no router state)", () => {
-  const source = readFileSync(new URL("../../frontend/src/components/ProtectedRoute.jsx", import.meta.url), "utf8");
-  expect(source).toContain("`/login/?next=${encodeURIComponent(location.pathname + location.search)}`");
-  expect(source).toContain("window.location.replace(target)");
-  expect(source).not.toContain("<Navigate");
-  const nextRoutes = readFileSync(new URL("../../frontend/src/utils/nextRoutes.jsx", import.meta.url), "utf8");
-  expect(nextRoutes).toContain("DJANGO_OWNED_PREFIXES");
-  for (const prefix of ["/admin", "/api", "/payment/callback", "/media", "/static"]) {
-    expect(nextRoutes).toContain(`"${prefix}"`);
-  }
 });

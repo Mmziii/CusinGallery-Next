@@ -71,12 +71,6 @@ services:
     environment:
       POSTGRES_HOST: db
       DJANGO_SETTINGS_MODULE: config.settings.production
-      # Audit 19 item 5: Django answers every storefront page request (a real
-      # 200 for a known page, a real 404 otherwise -- see apps/core/spa.py),
-      # and needs the built index.html to do it. The frontend container owns
-      # that file; fetching it over the compose network keeps it impossible
-      # to serve a stale shell after a deploy. Cached in-process for 30s.
-      SPA_SHELL_URL: http://frontend/index.html
     command: ["sh", "/app/docker-entrypoint.sh"]
     volumes:
       - static_volume:/app/staticfiles
@@ -128,27 +122,6 @@ services:
       db:
         condition: service_healthy
 
-  frontend:
-    build:
-      context: .
-      dockerfile: docker/frontend/Dockerfile
-      args:
-        # Optional npm registry mirror (same idea as PIP_INDEX_URL above).
-        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
-        VITE_SITE_ORIGIN: ${VITE_SITE_ORIGIN:-https://cusin.ir}
-        # Optional analytics (Part 4): empty = nothing loads. See
-        # docs/DEPLOY.md «آنالیتیکس».
-        VITE_ANALYTICS_SCRIPT_URL: ${ANALYTICS_SCRIPT_URL:-}
-        VITE_ANALYTICS_SITE_ID: ${ANALYTICS_SITE_ID:-}
-        # Optional frontend error reporting (Part S3 item 9): empty =
-        # the browser sends nothing; any non-empty value enables crash
-        # reports through the backend's existing Sentry setup.
-        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
-    restart: unless-stopped
-    depends_on:
-      - backend
-
   web:
     build:
       context: ./web
@@ -156,6 +129,8 @@ services:
         NEXT_PUBLIC_ANALYTICS_SCRIPT_URL: ${ANALYTICS_SCRIPT_URL:-}
         NEXT_PUBLIC_ANALYTICS_SITE_ID: ${ANALYTICS_SITE_ID:-}
         NEXT_PUBLIC_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+        # Optional npm registry mirror (same idea as PIP_INDEX_URL above).
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-}
     restart: unless-stopped
     environment:
       INTERNAL_API_URL: http://backend:8000
@@ -180,7 +155,6 @@ services:
       - media_volume:/app/media:ro
     depends_on:
       - backend
-      - frontend
       - web
 
   # Let's Encrypt companion: renews certificates twice a day via the

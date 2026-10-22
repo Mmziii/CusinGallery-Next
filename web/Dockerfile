@@ -1,7 +1,11 @@
 FROM node:22-alpine AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json .npmrc ./
-RUN npm ci
+# Optional npm registry mirror for networks where registry.npmjs.org is
+# slow or blocked (see docs/DEPLOY.md, section 23-2). Empty = npm's own
+# default; no mirror is assumed or hard-coded anywhere.
+ARG NPM_CONFIG_REGISTRY=""
+RUN if [ -n "$NPM_CONFIG_REGISTRY" ]; then npm ci --registry="$NPM_CONFIG_REGISTRY"; else npm ci; fi
 
 FROM node:22-alpine AS builder
 WORKDIR /app

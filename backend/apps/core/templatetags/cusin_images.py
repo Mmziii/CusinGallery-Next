@@ -4,7 +4,7 @@ surfaces (the printable invoice today; any future server-rendered page can
 use the same tag).
 
 The storefront routes every product/category/brand image through
-frontend/src/components/SmartImage.jsx; the markup below is its server-side
+web/components/SmartImage.jsx; the markup below is its server-side
 twin -- same warm-grey field, same brand mark at the same olive/.35
 opacity -- so a missing image and a broken image look identical everywhere.
 """

@@ -13,6 +13,10 @@ of these.
 """
 from django.db import models
 
+#: The Persian brand name. Not a setting: it is the store's fixed name
+#: (see apps/core/test_brand_name.py for the spelling guard).
+SITE_NAME = "کازین گالری"
+
 from .theme import (
     BASE_FONT_SIZE_CHOICES,
     BUTTON_RADIUS_CHOICES,
@@ -60,7 +64,7 @@ class OrderableModel(models.Model):
 
 
 #: Icon ids the storefront's Icon component really knows (see
-#: frontend/src/components/Icon.jsx). The trust-strip icon dropdown offers
+#: web/components/Icon.jsx). The trust-strip icon dropdown offers
 #: exactly these, so an owner can never save an icon that renders blank.
 TRUST_ICON_CHOICES = (
     ("shield-check", "سپر تأیید (اصالت کالا)"),
@@ -82,8 +86,8 @@ TRUST_ICON_CHOICES = (
 )
 
 #: The fixed info/trust pages and the URL each one is served at. Slugs are
-#: part of the public route table (frontend/src/App.jsx + apps/core/spa.py),
-#: so the owner edits their content, never the address.
+#: part of the public route table (the Next app router + proxy.js), so the
+#: owner edits their content, never the address.
 INFO_PAGE_SLUGS = (
     ("about", "دربارهٔ ما"),
     ("contact", "تماس با ما"),
@@ -488,8 +492,6 @@ class SiteSettings(TimeStampedModel):
         """
         from apps.core.placeholders import is_placeholder
 
-        from .seo import SITE_NAME
-
         for candidate in (self.shop_name, self.site_name):
             name = (candidate or "").strip()
             if name and not is_placeholder(name):
@@ -539,8 +541,8 @@ class InfoPage(TimeStampedModel):
     """One of the five owner-editable info/trust pages.
 
     ``slug`` is a closed choice list: the URL of each page is part of the
-    public route table (backend/apps/core/spa.py and frontend/src/App.jsx),
-    so the owner edits the content and title, never the address. The body
+    public route table (the Next app router + proxy.js), so the owner edits
+    the content and title, never the address. The body
     is rich HTML, sanitised on save (apps/core/sanitize.py) and again when
     served, so a pasted ``<script>``/``on*`` attribute can never reach the
     storefront.

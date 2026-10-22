@@ -8,15 +8,14 @@ import { useEffect } from "react";
  * nothing on unmount (the next page overwrites everything -- there is
  * always exactly one page mounted).
  *
- * Honest limitation (also documented in docs/DEPLOY.md): this is a
- * client-rendered SPA, so search engines that execute JavaScript (Google)
- * see these values, but social-network crawlers that don't (Telegram,
- * Twitter, ...) only see the site-wide defaults baked into index.html.
- * True per-product OG tags would require SSR/prerendering.
+ * Client-side companion to the server metadata (lib/metadata.js): page
+ * navigations after hydration update the same tags here, while crawlers
+ * and first paints get the server-rendered values -- no JavaScript
+ * needed.
  *
- * VITE_SITE_ORIGIN is the canonical public origin (build-time variable,
- * default https://cusin.ir) -- same-origin deployments only need the
- * default.
+ * NEXT_PUBLIC_SITE_ORIGIN is the canonical public origin (build-time
+ * variable, default https://cusin.ir) -- same-origin deployments only
+ * need the default.
  */
 
 const SITE_ORIGIN = (process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://cusin.ir").replace(/\/$/, "");

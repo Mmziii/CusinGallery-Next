@@ -179,14 +179,6 @@ class InfoPageAPITests(CacheIsolatedAPITestCase):
     def test_unknown_page_is_a_404(self):
         self.assertEqual(self.client.get(self.url("nope")).status_code, 404)
 
-    def test_unpublished_info_page_url_is_a_real_404_page(self):
-        page = InfoPage.objects.get(slug="shipping-returns")
-        page.is_published = False
-        page.save()
-        response = self.client.get("/shipping-returns/")
-        self.assertEqual(response.status_code, 404)
-
-
 @override_settings(ADMIN_THEME_ENABLED=True)
 class SiteContentAdminTests(TestCase):
     def setUp(self):

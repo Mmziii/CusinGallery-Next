@@ -14,7 +14,7 @@ while it stays the default. Always restart the backend after changing it.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path, re_path
+from django.urls import include, path
 
 from apps.adminui.views import quick_search
 from apps.analytics.admin_views import (
@@ -22,8 +22,6 @@ from apps.analytics.admin_views import (
     reports_print,
     reports_view,
 )
-from apps.core.seo import brand_meta, product_meta, shop_meta
-from apps.core.spa import spa_page
 from apps.core.views import healthz, robots_txt, sitemap_xml
 
 # settings.ADMIN_PATH is the single source of truth (also used by
@@ -62,13 +60,6 @@ urlpatterns = [
     path("healthz", healthz, name="healthz"),
     path("robots.txt", robots_txt, name="robots-txt"),
     path("sitemap.xml", sitemap_xml, name="sitemap-xml"),
-    # Part S4 item 3: crawler-visible meta. The nginx configs route known
-    # bot user agents for /products/<slug>/ and /shop/?category=<slug> to
-    # these two endpoints (a real shopper keeps getting the SPA); they are
-    # plain, minimal HTML documents, not part of the public API.
-    path("seo/product/<str:slug>/", product_meta, name="seo-product"),
-    path("seo/shop/", shop_meta, name="seo-shop"),
-    path("seo/brand/<str:slug>/", brand_meta, name="seo-brand"),
     # Alias of apps.payments' callback endpoint at the site root, matching
     # the PAYMENT_CALLBACK_URL shape documented in .env.example
     # (https://cusin.ir/payment/callback/). Same view either way -- see
@@ -82,15 +73,7 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-# ---------------------------------------------------------------------------
-# Storefront catch-all (Audit 19 item 5) -- MUST stay last.
-# ---------------------------------------------------------------------------
-# nginx routes page requests here instead of answering every path with the
-# SPA shell, so /nonexistent-xyz and /products/does-not-exist/ are real 404s
-# (with the same Persian 404 page) instead of "200 with the 404 design".
-# It is appended AFTER the DEBUG media route above so /media/ keeps working
-# in development; anything that is not a page (/api/, /admin/, /static/,
-# /media/, /seo/, /healthz) is rejected with Django's own 404.
-urlpatterns += [
-    re_path(r"^(?P<spa_path>.*)$", spa_page, name="spa-page"),
-]
+# NOTE (Phase 5): there is deliberately NO storefront catch-all here. Every
+# page -- including the unknown-path 404 -- is server-rendered by the Next
+# app (the nginx `location /` catch-all proxies web:3000), so anything that
+# reaches Django outside the routes above is answered with Django's own 404.

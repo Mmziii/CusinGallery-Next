@@ -24,11 +24,12 @@ describe("Phase 3b responsive CSS & edge routing contracts", () => {
     }
   });
 
-  it("keeps CheckoutStepper identical to SPA and ensures no purchase file uses JS viewport queries or window.confirm", () => {
-    const stepperWeb = read("../components/CheckoutStepper.jsx")
-      .replace(/^"use client";\n/, "")
-      .replace(/from "\.\.\/lib\/navigation"/g, 'from "react-router-dom"');
-    expect(stepperWeb).toBe(read("../../frontend/src/components/CheckoutStepper.jsx"));
+  it("keeps CheckoutStepper markup and ensures no purchase file uses JS viewport queries or window.confirm", () => {
+    // NOTE (Phase 5): the pre-migration diff against
+    // the retired-Vite CheckoutStepper.jsx was removed with the
+    // retired Vite app; the stepper below is the storefront now, and its
+    // rendering is pinned by the purchase HTTP tests instead.
+    expect(read("../components/CheckoutStepper.jsx")).toContain("checkout__steps");
 
     for (const file of [
       "../purchase/CartPage.jsx",
@@ -47,12 +48,18 @@ describe("Phase 3b responsive CSS & edge routing contracts", () => {
       "../../nginx/prod.d/00-bootstrap-http.conf.example",
     ]) {
       const conf = read(file);
-      const nextRegexes = [...conf.matchAll(/location ~ (\S+) \{/g)].map((m) => new RegExp(m[1]));
-      expect(nextRegexes.some((re) => re.test("/cart/"))).toBe(true);
-      expect(nextRegexes.some((re) => re.test("/checkout/"))).toBe(true);
-      expect(nextRegexes.some((re) => re.test("/payment/result/"))).toBe(true);
-      expect(nextRegexes.some((re) => re.test("/payment/result/42/"))).toBe(true);
-      expect(nextRegexes.some((re) => re.test("/payment/callback/"))).toBe(false);
+      // Phase 5: the per-route Next regexes were folded into the catch-all,
+      // so /cart/, /checkout/ and /payment/result/... reach web:3000 by
+      // falling through to `location /` -- while /payment/callback/ keeps
+      // its exact-prefix backend block and no regex may divert it.
+      for (const gone of ["^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$"]) {
+        expect(conf).not.toContain(`location ~ ${gone} {`);
+      }
+      const callback = conf.split("location /payment/callback/ {")[1]?.split("}")[0];
+      expect(callback).toContain("proxy_pass http://backend_upstream;");
+      expect(conf.match(/location \/ \{[^}]*proxy_pass http:\/\/web:3000;[^}]*\}/)?.[0]).toBeTruthy();
+      const regexes = [...conf.matchAll(/location (~\*?)\s+(\S+) \{/g)].map((m) => new RegExp(m[2].replace(/^["']|["']$/g, ""), m[1] === "~*" ? "i" : ""));
+      expect(regexes.some((re) => re.test("/payment/callback/"))).toBe(false);
     }
   });
 });

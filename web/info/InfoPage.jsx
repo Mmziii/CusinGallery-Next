@@ -6,10 +6,9 @@ import { ErrorState } from "../components/ui";
 import { Link } from "../lib/navigation";
 
 /**
- * Port of frontend/src/pages/info/InfoPage.jsx.
+ * Owner-editable info/trust page article (about, contact, ...).
  *
- * Content is owner-edited rich text sanitised on write in Django's core.models;
- * class names, elements, and Persian copy match the SPA 1:1.
+ * Content is owner-edited rich text sanitised on write in Django's core.models.
  */
 export function InfoPageArticle({ page }) {
   return (

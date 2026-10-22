@@ -1,12 +1,12 @@
-"""HTTP contract shared by every collection endpoint consumed by the SPA.
+"""HTTP contract shared by every collection endpoint consumed by the storefront.
 
-The frontend has two deliberate access patterns:
+The storefront has two deliberate access patterns:
 
 * page-at-a-time endpoints (catalog, public reviews and order history)
   expose the DRF envelope directly to their pager;
 * all-items selectors (addresses, wishlist, category tree, filters, own
   reviews, banners and daily deals) follow ``next`` in
-  ``frontend/src/services/pagination.js``.
+  ``web/services/pagination.js``.
 
 Both patterns require the same four keys. Keeping this one cross-app test
 near the API infrastructure prevents an endpoint from quietly changing to a

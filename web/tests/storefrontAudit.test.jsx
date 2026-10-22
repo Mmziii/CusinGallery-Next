@@ -1,8 +1,8 @@
 /** CSS-contract guards for the phone/desktop storefront live audit.
  *
- * The same contract as frontend/src/styles/storefront.audit.test.js, asserted
- * against the NEXT app's copy of the stylesheet (styles/storefront.css), which
- * is what the live storefront is actually served from. */
+ * CSS-contract guards asserted against the storefront stylesheet
+ * (styles/storefront.css), which is what the live storefront is actually
+ * served from. */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";

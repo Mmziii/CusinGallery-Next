@@ -8,9 +8,10 @@ Design decisions
   a blank override inherits the preset value, so the owner can change just
   the primary color without having to re-enter the rest. This is also why
   the owner can always get back to a known-good look with one click.
-* Only tokens the storefront actually uses are emitted. The frontend's
-  variables.css defines them; the inline block produced here is loaded
-  before the first paint by apps/core/spa.py.
+* Only tokens the storefront actually uses are emitted. The storefront's
+  variables.css defines them; the values travel inside the public
+  /api/v1/site/content/ payload and the Next root layout
+  (web/app/layout.js) applies them before the first paint.
 * ``contrast_issues`` is the guard the admin form calls on save. It checks
   the three text/background pairs that carry actual information (body text,
   button label, header text) at the WCAG AA threshold of 4.5:1. A palette

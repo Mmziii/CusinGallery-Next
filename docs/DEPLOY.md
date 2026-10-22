@@ -169,9 +169,9 @@ nano .env
 | `ADMIN_URL` | آدرس پنل مدیریت. پیش‌فرض `admin/` است ولی ربات‌ها مدام آن را اسکن می‌کنند؛ یک مقدار خصوصی بگذارید (مثلاً `panel-cusin-88`) و بک‌اند را ری‌استارت کنید — پنل در `https://cusin.ir/panel-cusin-88/` باز می‌شود |
 | `ADMIN_THEME_ENABLED` | پوستهٔ برند پنل مدیریت (فارسی/RTL با فونت وزیرمتن، داشبورد، جستجوی سریع Ctrl+K). پیش‌فرض `True`؛ مقدار `0` پنل را **فوراً** و بدون تغییر در قابلیت‌ها به ظاهر استاندارد جنگو برمی‌گرداند (قالب‌های پوسته از مسیر `backend/templates` حذف می‌شوند). راهنمای کامل: بخش ۱۶ `docs/OWNER_GUIDE.fa.md` |
 | `SENTRY_DSN` | اختیاری — DSN پروژهٔ رایگان sentry.io برای دریافت خطاها (بک‌اند؛ خطاهای فرانت هم از همین مسیر ثبت می‌شوند — سطر بعدی) |
-| `VITE_SENTRY_DSN` | اختیاری، در `frontend/.env` — هر مقدار غیرخالی = فعال‌شدن گزارش خطاهای فرانت‌اند (خرابی صفحه در ErrorBoundary به `POST /api/v1/site/report-error/` ارسال و با همین `SENTRY_DSN` بک‌اند ثبت می‌شود). خالی = مرورگر هیچ چیزی نمی‌فرستد. بعد از تغییر، build فرانت لازم است |
+| `VITE_SENTRY_DSN` | اختیاری، در همین `.env` — هر مقدار غیرخالی = فعال‌شدن گزارش خطاهای فروشگاه (خرابی صفحه در ErrorBoundary به `POST /api/v1/site/report-error/` ارسال و با همین `SENTRY_DSN` بک‌اند ثبت می‌شود؛ در build به `NEXT_PUBLIC_SENTRY_DSN` تبدیل می‌شود). خالی = مرورگر هیچ چیزی نمی‌فرستد. بعد از تغییر، build کانتینر `web` لازم است |
 | `LOG_FORMAT` | `json` بماند (لاگ ساختاریافته برای `docker compose logs`) |
-| `VITE_SITE_ORIGIN` | `https://cusin.ir` (برای لینک‌های سئو) |
+| `VITE_SITE_ORIGIN` | `https://cusin.ir` (آدرس عمومی سایت؛ برای لینک‌های سئو و مقدار `SITE_ORIGIN` کانتینر `web`) |
 | بقیه (هزینهٔ ارسال، `ORDER_EXPIRY_HOURS` و…) | پیش‌فرض‌ها منطقی‌اند؛ هر وقت خواستید عوض کنید |
 
 ---
@@ -183,7 +183,7 @@ cd /opt/cusin/CusinGallery
 
 # چون هنوز گواهی SSL نداریم، nginx را با پیکربندی موقت HTTP بالا می‌آوریم
 # (توضیح کامل در بخش ۹). ابتدا فقط اجزای غیر-nginx:
-docker compose -f docker-compose.prod.yml up -d --build db redis backend scheduler frontend
+docker compose -f docker-compose.prod.yml up -d --build db redis backend scheduler web
 
 # صبر کنید تا backend سالم بالا بیاید (migrate و collectstatic خودکار است):
 docker compose -f docker-compose.prod.yml logs -f backend
@@ -279,8 +279,8 @@ curl https://cusin.ir/sitemap.xml | head
 (Product با قیمت به **ریال** = تومان × ۱۰ و `priceCurrency: "IRR"`، و
 BreadcrumbList) داخل همان HTML اولیه هستند. بنابراین دیگر هیچ تفکیک
 خزنده/کاربر لازم نیست و بلوک‌های قدیمی `map $http_user_agent` و بازنویسی به
-`/seo/...` از هر سه فایل nginx حذف شده‌اند. نقطهٔ پایانی `/seo/...` جنگو
-همچنان وجود دارد ولی nginx به آن ارجاع نمی‌دهد.
+`/seo/...` از هر سه فایل nginx حذف شده‌اند و نقطهٔ پایانی `/seo/...` جنگو
+هم به‌طور کامل حذف شده است: Next به خزنده و کاربر همان HTML واقعی را می‌دهد.
 
 | آدرس | مقصد |
 |---|---|
@@ -288,7 +288,7 @@ BreadcrumbList) داخل همان HTML اولیه هستند. بنابراین �
 | `/products/<slug>/` | کانتینر `web` |
 | `/brands/<slug>/` | کانتینر `web` |
 | `/_next/`، `/` | کانتینر `web` |
-| `/cart/`، `/checkout/`، `/account/`، `/login/`، صفحه‌های اعتماد | کانتینر `frontend` (SPA) |
+| همهٔ صفحه‌های دیگر (سبد، تسویه، حساب، ورود، صفحه‌های اعتماد، …) | کانتینر `web` (از طریق catch-all) |
 | `/api/`، `/admin/` | بک‌اند (Django) |
 | `/robots.txt`، `/sitemap.xml` | بک‌اند (Django) |
 
@@ -343,34 +343,30 @@ curl -A "WhatsApp/2.23" https://cusin.ir/products/<slug>/ | head -30          # 
 
 پیش از این، nginx هر آدرس صفحه را با `index.html` و کد **۲۰۰** پاسخ می‌داد؛
 یعنی `/nonexistent-xyz` و `/products/does-not-exist/` یک «۴۰۴ نرم» بودند و
-خزنده‌ها آن‌ها را ایندکس می‌کردند. اکنون nginx درخواست‌های **صفحه** را به
-ویو catch-all جنگو (`apps/core/spa.py`) می‌فرستد و آن‌جا تصمیم گرفته می‌شود:
+خزنده‌ها آن‌ها را ایندکس می‌کردند. اکنون همهٔ درخواست‌های **صفحه** به اپ
+Next می‌رسند (`location /` در nginx) و همان‌جا تصمیم گرفته می‌شود:
 
 | آدرس | پاسخ |
 |---|---|
-| مسیرهای شناخته‌شدهٔ SPA (خانه، فروشگاه، سبد، پرداخت، حساب، صفحه‌های اعتماد) | `index.html` با کد ۲۰۰ |
+| صفحه‌های شناخته‌شده (خانه، فروشگاه، سبد، پرداخت، حساب، صفحه‌های اعتماد) | HTML کامل با کد ۲۰۰ |
 | `/products/<slug>/` و `/brands/<slug>/` و `/shop/` | کانتینر `web` (Next)؛ اسلاگ ناموجود → ۴۰۴ واقعی |
 | هر چیز دیگر | همان صفحهٔ ۴۰۴ فارسی، کد **۴۰۴** + `<meta name="robots" content="noindex">` و هدر `X-Robots-Tag` |
 
-فایل‌های استاتیک ساخته‌شده (`/assets/`, `/fonts/`, `/brand/`, favicon) همچنان
-توسط کانتینر `frontend` سرو می‌شوند. متن سند SPA از این منابع خوانده می‌شود:
-`SPA_INDEX_FILE` (اگر تنظیم شده و وجود داشته باشد)، سپس `frontend/index.html`
-مخزن (محیط توسعه)، سپس `SPA_SHELL_URL` (پیش‌فرض در Compose:
-`http://frontend/index.html` — با کش ۳۰ ثانیه‌ای در پروسه)، و در نهایت یک سند
-کوچک فارسی داخلی تا هیچ‌وقت صفحهٔ سفید دیده نشود.
+فایل‌های عمومی فروشگاه (`/fonts/`, `/brand/`, favicon) را خود Next از پوشهٔ
+`web/public/` سرو می‌کند و نیازی به location جداگانه در nginx ندارند.
 
 آزمایش دستی (با User-Agent یک خزنده):
 
 ```bash
 curl -A "WhatsApp/2.23" https://cusin.ir/products/<slug>/ | head -30
 curl -A "TelegramBot (like TwitterBot)" "https://cusin.ir/shop/?category=<slug>" | head -30
-curl -A "Mozilla/5.0" https://cusin.ir/products/<slug>/ | head -5   # همان SPA
+curl -A "Mozilla/5.0" https://cusin.ir/products/<slug>/ | head -5   # همان HTML واقعی
 ```
 
-نکتهٔ استقرار: این بلوک‌ها به `map $http_user_agent` نیاز دارند که در همان
-فایل‌های `conf.d` تعریف شده است؛ اگر فایل را جای دیگری کپی می‌کنید، بلوک
-`map` را هم با خودش ببرید. پس از تغییر، `docker compose -f
-docker-compose.prod.yml restart nginx` و بعد همان `curl`های بالا را اجرا کنید.
+هر سه دستور بالا باید همان HTML واقعی (عنوان، canonical، تگ‌های Open Graph)
+را برگردانند — دیگر هیچ تفکیک خزنده/کاربر وجود ندارد. پس از هر تغییر در
+nginx، `docker compose -f docker-compose.prod.yml restart nginx` و بعد همان
+`curl`های بالا را اجرا کنید.
 
 ---
 
@@ -386,11 +382,11 @@ docker-compose.prod.yml restart nginx` و بعد همان `curl`های بالا 
   `docker compose -f docker-compose.prod.yml exec backend python manage.py seed_demo`
   (بعداً از پنل پاکشان کنید).
 
-صفحات «دربارهٔ ما / تماس / ارسال و مرجوعی / قوانین / حریم خصوصی» در frontend
-متن **نمونه** دارند: فایل‌های `frontend/src/pages/info/*.jsx` را با متن واقعی
-خودتان عوض کنید (یا از پشتیبان فنی بخواهید) و سپس image را دوباره بسازید
-(بخش ۱۶). نشانهٔ e-namad هم در `frontend/src/components/Footer.jsx` جای
-مشخص دارد.
+صفحات «دربارهٔ ما / تماس / ارسال و مرجوعی / قوانین / حریم خصوصی» ردیف‌های
+قابل‌ویرایش در پنل مدیریت‌اند (منوی «صفحات اطلاعاتی»): متن نمونه را با متن
+واقعی خودتان عوض کنید و تیک «منتشر شده» را بزنید — بدون نیاز به build
+دوباره. کد e-namad هم در همان پنل، در «تنظیمات فروشگاه» (فیلد کد نماد
+اعتماد) ذخیره می‌شود و در فوتر نمایش داده می‌شود.
 
 ---
 
@@ -516,7 +512,7 @@ scp -r user@YOUR_SERVER_IP:/var/backups/cusin ~/cusin-backups/
 cd /opt/cusin/CusinGallery
 git fetch --tags
 git checkout <tag-or-commit-جدید>          # یا git pull برای آخرین main
-docker compose -f docker-compose.prod.yml build backend frontend
+docker compose -f docker-compose.prod.yml build backend web
 docker compose -f docker-compose.prod.yml up -d
 docker compose -f docker-compose.prod.yml logs -f backend   # migrate خودکار اجرا می‌شود
 docker compose -f docker-compose.prod.yml exec backend python manage.py check_production
@@ -534,7 +530,7 @@ docker compose -f docker-compose.prod.yml exec backend python manage.py check_pr
 ```bash
 cd /opt/cusin/CusinGallery
 git checkout <commit-قبلی>
-docker compose -f docker-compose.prod.yml build backend frontend
+docker compose -f docker-compose.prod.yml build backend web
 docker compose -f docker-compose.prod.yml up -d
 ```
 
@@ -607,17 +603,17 @@ curl https://cusin.ir/healthz
 
 در `.env` دو متغیر اختیاری دارید: `ANALYTICS_SCRIPT_URL` و `ANALYTICS_SITE_ID`. هر دو
 خالی بمانند، **هیچ اسکریپتی لود نمی‌شود** و کوکی‌ای ساخته نمی‌شود. اگر مقدار بدهید،
-اسکریپت فقط در فروشگاه (SPA) لود می‌شود — پنل مدیریت و صفحهٔ بازگشت درگاه هرگز آن را
+اسکریپت فقط در فروشگاه (Next) لود می‌شود — پنل مدیریت و صفحهٔ بازگشت درگاه هرگز آن را
 نمی‌آورند — و به «Do Not Track» مرورگر احترام می‌گذارد.
 
 گزینه‌های پیشنهادی: **Plausible خودمیزبان** (سبک، بدون کوکی، سازگار با حریم خصوصی) یا
 **Matomo خودمیزبان**. سرویس‌هایی مثل Google Analytics از داخل ایران اغلب ناپایگار یا
 مسدودند و با تحریم‌های اسکریپت‌های خارجی برای بازدیدکنندگان ایرانی مشکل‌ساز می‌شوند؛
 به همین دلیل پیش‌فرض این پروژه «خاموش» است. پس از تغییر متغیرها، image فرانت باید
-دوباره build شود (متغیرهای VITE در زمان build جای‌گذاری می‌شوند):
+دوباره build شود (متغیرهای `NEXT_PUBLIC_*` در زمان build جای‌گذاری می‌شوند):
 
 ```bash
-docker compose -f docker-compose.prod.yml build frontend && \
+docker compose -f docker-compose.prod.yml build web && \
 docker compose -f docker-compose.prod.yml up -d
 ```
 
@@ -692,7 +688,7 @@ global.index-url https://<آدرس آینه>/simple/` است.)
 
 ```bash
 NPM_CONFIG_REGISTRY=https://<آدرس آینه>/ \
-    docker compose -f docker-compose.prod.yml build frontend
+    docker compose -f docker-compose.prod.yml build web
 ```
 
 بدون Docker (مثلاً روی ویندوز، بخش ۲۴) یک‌بار برای همیشه:
@@ -778,17 +774,18 @@ $env:DATABASE_URL="sqlite:///db.sqlite3"
 مرحله ۲ — رابط کاربری (پنجرهٔ دوم ترمینال؛ پنجرهٔ اول باید باز بماند):
 
 ```bat
-cd frontend
+cd web
 npm ci
+set INTERNAL_API_URL=http://localhost:8000
 npm run dev
 ```
 
-سپس در مرورگر `http://localhost:5173` را باز کنید (نه پورت ۸۰۰۰).
+سپس در مرورگر `http://localhost:3000` را باز کنید (نه پورت ۸۰۰۰).
 
-**چرا دو پورت؟** سرور توسعهٔ Vite روی پورت **۵۱۷۳** بالا می‌آید و درخواست‌های
-`/api` و `/media` را خودش به بک‌اند روی پورت **۸۰۰۰** می‌فرستد
-(`frontend/vite.config.js`). پس مرورگر فقط با ۵۱۷۳ حرف می‌زند و کوکی ورود/CSRF
-روی یک دامنه می‌ماند؛ Django هم باید در همان پنجرهٔ اول در حال اجرا باشد.
+**چرا دو پورت؟** سرور توسعهٔ Next روی پورت **۳۰۰۰** بالا می‌آید و داده‌ها را
+سمت سرور از بک‌اند روی پورت **۸۰۰۰** می‌خواند (`INTERNAL_API_URL`)؛ Django هم
+باید در همان پنجرهٔ اول در حال اجرا باشد. (اگر PowerShell استفاده می‌کنید، خط
+`set` را با `$env:INTERNAL_API_URL="http://localhost:8000"` عوض کنید.)
 
 نکته‌های کوچک:
 

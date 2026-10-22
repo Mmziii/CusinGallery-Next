@@ -43,7 +43,7 @@
 
 ## ارسال رویدادها
 
-* مرورگر: `frontend/src/utils/behaviour.js` رویدادها را دسته‌ای (حداکثر ۲۵
+* مرورگر: `web/utils/behaviour.js` رویدادها را دسته‌ای (حداکثر ۲۵
   رویداد یا هر ۳ ثانیه) به `POST /api/v1/analytics/events/` می‌فرستد؛
   `keepalive`/`sendBeacon`، بدون هیچ خطای قابل‌مشاهده در UI. Do Not Track
   و ربات‌ها نادیده گرفته می‌شوند.
