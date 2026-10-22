@@ -88,9 +88,9 @@ export function parseStylesheet(file, css) {
 }
 
 export function loadDeclarations(files = STYLE_IMPORTS) {
-  return files.flatMap((file) =>
-    parseStylesheet(file, readFileSync(path.join(WEB_ROOT, file), "utf8"))
-  );
+  return files
+    .flatMap((file) => parseStylesheet(file, readFileSync(path.join(WEB_ROOT, file), "utf8")))
+    .map((entry, order) => ({ ...entry, order }));
 }
 
 /** Specificity of a simple selector: [ids, classes/attrs/pseudo-classes, elements]. */

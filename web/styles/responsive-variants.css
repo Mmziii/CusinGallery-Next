@@ -13,6 +13,10 @@
   .product-card--compact {
     display: none;
   }
+
+  .checkout__desktop-action {
+    display: flex;
+  }
 }
 
 /* Product content sections: the phone gets native accordions, the desktop a
@@ -25,9 +29,9 @@
   .product-detail__section--collapsible { display: block; }
 }
 
-/* Shop paging, two variants. The desktop grid is the server's page N and is
-   never touched by client-side appends; phones get the appended pages in a
-   second grid that only exists below 768px (empty = no box at all). */
+/* Shop paging, two variants. The phone gets appended pages in a second grid
+   that only exists below 768px (empty = no box at all); the desktop grid is
+   the server's page N and is never touched by client-side appends. */
 .shop__more-grid { display: none; }
 
 @media (max-width: 767px) {

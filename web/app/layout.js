@@ -6,7 +6,7 @@ import "../styles/storefront.css";
 import "../styles/responsive-variants.css";
 import { AuthProvider } from "../store/useAuthStore";
 import { probeUser } from "../lib/auth-server";
-import { isProtectedPath } from "../lib/auth-navigation";
+import { isPrivatePath, isProtectedPath } from "../lib/auth-navigation";
 import MainLayout from "../layouts/MainLayout";
 import Analytics from "../components/Analytics";
 import { SiteProvider } from "../lib/site-context";
@@ -16,7 +16,8 @@ export default async function RootLayout({ children }) {
   // Establish request rendering outside API fallbacks (do not swallow Next dynamic signals).
   const incoming = await headers();
   const path = incoming.get("x-auth-original-url") || "";
-  const user = isProtectedPath(path.split("?")[0]) ? await probeUser() : undefined;
+  const pathname = path.split("?")[0];
+  const user = isProtectedPath(pathname) || isPrivatePath(pathname) ? await probeUser() : undefined;
   const site = await getSite();
   return <html lang="fa" dir="rtl" style={site.content.theme?.css_variables || {}}><head>
     <link rel="icon" href={site.content.brand?.favicon || "/favicon.svg"} />

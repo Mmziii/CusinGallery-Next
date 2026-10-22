@@ -8,8 +8,22 @@ export function safeNext(value, fallback = "/") {
   } catch { return fallback; }
   return value;
 }
+
 export function loginUrl(path) {
   return `/login/?next=${encodeURIComponent(safeNext(path))}`;
 }
-export const isProtectedPath = (path) => /^\/(account|wishlist)(\/|$)/.test(path);
+
+export const isProtectedPath = (path) => /^\/(account|wishlist|checkout)(\/|$)/.test(path);
 export const isAuthPath = (path) => /^\/(login|register|password-reset|reset-password)(\/|$)/.test(path);
+export const isPrivatePath = (path) => /^\/(cart|payment)(\/|$)/.test(path);
+
+export function redirectToExternalUrl(url) {
+  if (typeof Location !== "undefined" && window.location instanceof Location) {
+    window.location.assign(url);
+    return;
+  }
+  window.location.href = url;
+  if (typeof window.location.assign === "function") {
+    window.location.assign(url);
+  }
+}

@@ -29,7 +29,7 @@ function renderAt(path) {
           <Route path="/broken/" element={<BrokenRoute />} />
           <Route path="/" element={<h1>خانهٔ بازیابی‌شده</h1>} />
           <Route path="/shop/" element={<SearchRoute />} />
-          <Route path="/cart/" element={<h1>سبد بازیابی‌شده</h1>} />
+          <Route path="/about/" element={<h1>دربارهٔ ما بازیابی‌شده</h1>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -70,10 +70,10 @@ describe("route error recovery navigation", () => {
     renderAt("/broken/");
     expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
 
-    // The footer keeps linking the SPA's own pages (cart/checkout/account).
-    fireEvent.click(screen.getByRole("link", { name: "سبد خرید" }));
+    // The footer keeps linking the SPA's static info pages.
+    fireEvent.click(screen.getByRole("link", { name: "دربارهٔ ما" }));
 
-    expect(await screen.findByRole("heading", { name: "سبد بازیابی‌شده" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "دربارهٔ ما بازیابی‌شده" })).toBeTruthy();
     expect(screen.queryByText("مشکلی پیش آمد")).toBeNull();
     spy.mockRestore();
   });
@@ -93,7 +93,7 @@ describe("route error recovery navigation", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     const assign = vi.fn();
     vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign, replace: vi.fn() });
-    renderAt("/cart/");
+    renderAt("/about/");
 
     const search = screen.getByRole("searchbox", { name: "جستجوی محصول" });
     fireEvent.change(search, { target: { value: "قابلمه" } });
