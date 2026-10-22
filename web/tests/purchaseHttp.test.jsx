@@ -280,7 +280,9 @@ it("renders success, failed, cancelled, and pending payment outcomes over HTTP w
     get("/payment/result/?status=cancelled", "sessionid=alice"),
   ]);
 
+  // Both result routes carry the SPA's exact document title (hamza above ه).
   const okDoc = stripScripts(okRes.body);
+  expect(okDoc).toContain("<title>نتیجهٔ پرداخت | کازین گالری</title>");
   expect(okDoc).toContain("پرداخت با موفقیت انجام شد");
   expect(okDoc).toContain("REF-SUCCESS-77");
   expect(okDoc).toContain('href="/account/orders/77/"');
@@ -309,6 +311,7 @@ it("renders success, failed, cancelled, and pending payment outcomes over HTTP w
   expect(pendingDoc).not.toContain("تلاش دوباره برای پرداخت");
 
   const fallbackDoc = stripScripts(missingCallback.body);
+  expect(fallbackDoc).toContain("<title>نتیجهٔ پرداخت | کازین گالری</title>");
   expect(fallbackDoc).toContain("پرداخت لغو شد");
   expect(fallbackDoc).toContain("مشاهده سفارش‌ها و تلاش دوباره");
 });

@@ -3,7 +3,7 @@ import { apiServer } from "../../../../lib/api-server";
 import { privateMetadata } from "../../../../lib/auth-server";
 
 export const dynamic = "force-dynamic";
-export const metadata = privateMetadata("نتیجه پرداخت");
+export const metadata = privateMetadata("نتیجهٔ پرداخت");
 
 export default async function PaymentResultDetailRoute({ params }) {
   const { paymentId } = await params;
