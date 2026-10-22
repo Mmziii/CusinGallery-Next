@@ -1,3 +1,4 @@
+import { isProtectedPath, isAuthPath } from "./lib/auth-navigation";
 import { NextResponse } from "next/server";
 
 import { CATALOG_KINDS, catalogSlugExists } from "./lib/catalog-availability";
@@ -27,7 +28,7 @@ import { CATALOG_KINDS, catalogSlugExists } from "./lib/catalog-availability";
  *  - `null` (upstream error/timeout) fails open: the page renders exactly as
  *    before rather than turning an API hiccup into a 404 for a real product.
  */
-export const config = { matcher: ["/products/:path*", "/brands/:path*"] };
+export const config = { matcher: ["/products/:path*", "/brands/:path*", "/account/:path*", "/wishlist/:path*", "/login/:path*", "/register/:path*", "/password-reset/:path*", "/reset-password/:path*"] };
 
 // Only the canonical detail page: /products/<slug>/ and /brands/<slug>/ with
 // the trailing slash (next.config.mjs sets trailingSlash). The slash-less
@@ -38,6 +39,16 @@ const DETAIL_PAGE = /^\/(products|brands)\/([^/]+)\/$/;
 export async function proxy(request) {
   if (request.method !== "GET" && request.method !== "HEAD") return NextResponse.next();
   const url = new URL(request.url);
+  if (isProtectedPath(url.pathname) || isAuthPath(url.pathname)) {
+    // Overwrite, never trust a browser-supplied path header. The RSC gate uses
+    // this exact query string rather than rebuilding/reordering searchParams.
+    const forwarded = new Headers(request.headers);
+    forwarded.set("x-auth-original-url", url.pathname + url.search);
+    const response = NextResponse.next({ request: { headers: forwarded } });
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("X-Robots-Tag", "noindex, follow");
+    return response;
+  }
   const match = DETAIL_PAGE.exec(url.pathname);
   if (!match) return NextResponse.next();
   const [, kind, rawSlug] = match;

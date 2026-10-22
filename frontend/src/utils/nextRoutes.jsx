@@ -9,7 +9,7 @@ import {
 
 /**
  * The storefront is being migrated page by page to the Next app; the SPA still
- * owns cart, checkout, account, auth and the info pages. This is the ONE
+ * owns cart, checkout, payment result and the info pages. This is the ONE
  * switchboard between them.
  *
  * Links into a Next-owned route must be a FULL DOCUMENT NAVIGATION (a plain
@@ -23,8 +23,8 @@ import {
  * produced.
  */
 
-//: Route prefixes rendered by the Next app (phases 1-2).
-const NEXT_OWNED_PREFIXES = ["/shop", "/products", "/brands"];
+//: Route prefixes rendered by the Next app (phases 1-3a).
+const NEXT_OWNED_PREFIXES = ["/shop", "/products", "/brands", "/login", "/register", "/password-reset", "/reset-password", "/account", "/wishlist"];
 
 /** The href a `to` value resolves to (string or {pathname, search, hash}). */
 export function nextHref(to) {

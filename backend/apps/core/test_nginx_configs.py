@@ -338,7 +338,9 @@ class NginxSecurityHeaderTests(SimpleTestCase):
         the X-Forwarded-* chain (Django builds absolute media URLs for the
         server-rendered page from those headers).
         """
-        routes = ("^/shop/?$", "^/products/[^/]+/?$", "^/brands/[^/]+/?$")
+        routes = ("^/shop/?$", "^/products/[^/]+/?$", "^/brands/[^/]+/?$",
+                  "^/login/?$", "^/register/?$", "^/password-reset/?$",
+                  "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$")
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             for route in routes:
@@ -355,6 +357,24 @@ class NginxSecurityHeaderTests(SimpleTestCase):
             with self.subTest(config=path.name, block="crawler map"):
                 self.assertNotIn("$cusin_is_bot", source)
                 self.assertNotIn("/seo/", source)
+
+    def test_auth_account_wishlist_keep_public_host_and_backend_routes(self):
+        """Phase 3a: private pages go to Next, not API/admin/payment callbacks."""
+        for path in NGINX_FILES:
+            source = strip_comments(path.read_text(encoding="utf-8"))
+            for route in ("^/login/?$", "^/register/?$", "^/password-reset/?$",
+                          "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$"):
+                body = self._location_body(source, f"location ~ {route}")
+                with self.subTest(config=path.name, route=route):
+                    self.assertIsNotNone(body)
+                    self.assertIn("proxy_set_header X-Forwarded-Host $http_host;", body)
+                    self.assertIn("proxy_set_header X-Real-IP $remote_addr;", body)
+            for route in ("/api/", "/admin/", "/payment/callback/"):
+                body = self._location_body(source, f"location {route}")
+                with self.subTest(config=path.name, route=route):
+                    self.assertIsNotNone(body)
+                    self.assertIn("backend_upstream", body)
+                    self.assertNotIn("web:3000", body)
 
     def test_seo_routes_reach_the_backend_in_every_config(self):
         """/robots.txt and /sitemap.xml are rendered by Django, not the SPA.

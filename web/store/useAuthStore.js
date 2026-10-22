@@ -1,3 +1,5 @@
+"use client";
+import { createContext, createElement, useContext, useRef } from "react";
 import { create } from "zustand";
 
 import * as authApi from "../services/authApi";
@@ -25,10 +27,10 @@ async function mergeGuestCartIntoServer() {
   if (!report) await useCartStore.getState().fetchCart();
 }
 
-const useAuthStore = create((set) => ({
-  user: null,
-  isLoading: true, // true until the first /me/ probe resolves
-  isAuthenticated: false,
+const createAuthStore = (initialUser) => create((set) => ({
+  user: initialUser || null,
+  isLoading: initialUser === undefined, // true until the first /me/ probe resolves
+  isAuthenticated: !!initialUser,
   error: null,
   /** Part R3: set when the server rejected a session mid-use (401). */
   sessionExpired: false,
@@ -46,8 +48,8 @@ const useAuthStore = create((set) => ({
       set({ user: data, isAuthenticated: true, isLoading: false, error: null });
       return { success: true };
     } catch (err) {
-      // Network failure etc. -- still just "not logged in right now".
-      set({ user: null, isAuthenticated: false, isLoading: false, error: null });
+      // A network failure is not evidence of logout. Preserve any known user.
+      set({ isLoading: false, error: null });
       return { success: false };
     }
   },
@@ -106,6 +108,9 @@ const useAuthStore = create((set) => ({
   },
 }));
 
+const useAuthStore = createAuthStore();
+let browserStore;
+
 /**
  * Part R3: mid-use session expiry. The apiClient broadcasts
  * "auth:session-expired" on any unexpected 401; we downgrade the user to
@@ -113,9 +118,10 @@ const useAuthStore = create((set) => ({
  */
 if (typeof window !== "undefined") {
   window.addEventListener("auth:session-expired", () => {
-    const state = useAuthStore.getState();
+    const store = browserStore || useAuthStore;
+    const state = store.getState();
     if (state.isAuthenticated || state.user) {
-      useAuthStore.setState({
+      store.setState({
         user: null,
         isAuthenticated: false,
         isLoading: false,
@@ -126,4 +132,21 @@ if (typeof window !== "undefined") {
   });
 }
 
-export default useAuthStore;
+const AuthContext = createContext(null);
+export function AuthProvider({ user, children }) {
+  const ref = useRef(null);
+  if (!ref.current) {
+    // Initial state (not setState) is essential: Zustand's SSR snapshot reads
+    // getInitialState, so late seeding would still show the anonymous header.
+    ref.current = createAuthStore(user);
+    if (typeof window !== "undefined") browserStore = ref.current;
+  }
+  return createElement(AuthContext.Provider, { value: ref.current }, children);
+}
+function useScopedAuthStore(selector) {
+  const store = useContext(AuthContext) || useAuthStore;
+  return store(selector);
+}
+useScopedAuthStore.getState = () => (browserStore || useAuthStore).getState();
+useScopedAuthStore.setState = (...args) => (browserStore || useAuthStore).setState(...args);
+export default useScopedAuthStore;

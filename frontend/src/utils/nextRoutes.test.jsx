@@ -1,5 +1,5 @@
 /**
- * Phase 2: the SPA must hand Next-owned routes to the browser.
+ * Phases 2–3a: the SPA must hand Next-owned routes to the browser.
  *
  * Clicking a react-router <Link> to "/", "/shop/...", "/products/..." or
  * "/brands/..." used to render the SPA's own retired copy of that page (the
@@ -43,12 +43,12 @@ afterEach(() => {
 });
 
 describe("isNextOwnedPath", () => {
-  it.each(["/", "/shop", "/shop/", "/shop/?category=pots", "/products/copper-pot/", "/brands/mes-karan/"])(
+  it.each(["/", "/shop", "/shop/", "/shop/?category=pots", "/products/copper-pot/", "/brands/mes-karan/", "/login/", "/account/orders/"])(
     "claims %s",
     (path) => expect(isNextOwnedPath(path)).toBe(true)
   );
 
-  it.each(["/cart/", "/checkout/", "/account/orders/", "/login/", "/about/", "/shopping-bags/", "/product-tour/"])(
+  it.each(["/cart/", "/checkout/", "/about/", "/shopping-bags/", "/product-tour/"])(
     "leaves %s to the SPA",
     (path) => expect(isNextOwnedPath(path)).toBe(false)
   );
@@ -61,6 +61,8 @@ describe("Link", () => {
     ["/shop/?category=pots", "/cart/"],
     ["/products/copper-pot/", "/wishlist/"],
     ["/brands/mes-karan/", "/account/orders/"],
+    ["/login/?next=%2Fcheckout%2F", "/checkout/"],
+    ["/account/orders/?x=1", "/cart/"],
   ])("renders a plain anchor for the Next-owned %s", (to, route) => {
     const release = blockDocumentNavigation();
     renderAt(
@@ -117,14 +119,14 @@ describe("useNextNavigate", () => {
     );
   }
 
-  it("navigates the DOCUMENT for a Next-owned route", () => {
+  it.each(["/shop/?search=pot", "/login/?next=%2Fcheckout%2F", "/account/orders/?x=1"])("navigates the DOCUMENT for the Next-owned %s", (to) => {
     const assign = vi.fn();
     vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign, replace: vi.fn() });
-    renderAt("/cart/", <NavTo to="/shop/?search=pot" />);
+    renderAt("/cart/", <NavTo to={to} />);
 
-    fireEvent.click(screen.getByText("go /shop/?search=pot"));
+    fireEvent.click(screen.getByText(`go ${to}`));
 
-    expect(assign).toHaveBeenCalledWith("/shop/?search=pot");
+    expect(assign).toHaveBeenCalledWith(to);
     expect(screen.getByTestId("location").textContent).toBe("/cart/");
   });
 
