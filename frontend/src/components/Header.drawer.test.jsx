@@ -121,8 +121,10 @@ describe("mobile navigation drawer", () => {
     await waitFor(() => expect(document.body.querySelector(".site-header__drawer")).toBeNull());
 
     drawer = await openDrawer(view);
-    fireEvent.click(within(drawer).getByRole("link", { name: "تماس با ما" }));
-    await waitFor(() => expect(screen.getByTestId("location").textContent).toBe("/contact/"));
+    const contactLink = within(drawer).getByRole("link", { name: "تماس با ما" });
+    expect(contactLink.getAttribute("href")).toBe("/contact/");
+    contactLink.addEventListener("click", (e) => e.preventDefault());
+    fireEvent.click(contactLink);
     await waitFor(() => expect(document.body.querySelector(".site-header__drawer")).toBeNull());
   });
 

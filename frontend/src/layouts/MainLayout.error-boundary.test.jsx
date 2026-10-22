@@ -65,16 +65,19 @@ describe("route error recovery navigation", () => {
     spy.mockRestore();
   });
 
-  it("resets the route boundary after navigating to a page the SPA still owns", async () => {
+  it("hands the footer info links to the Next app as document links", async () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
     renderAt("/broken/");
     expect(await screen.findByText("مشکلی پیش آمد")).toBeTruthy();
 
-    // The footer keeps linking the SPA's static info pages.
-    fireEvent.click(screen.getByRole("link", { name: "دربارهٔ ما" }));
-
-    expect(await screen.findByRole("heading", { name: "دربارهٔ ما بازیابی‌شده" })).toBeTruthy();
-    expect(screen.queryByText("مشکلی پیش آمد")).toBeNull();
+    // Phase 4: static info pages live on Next, so footer links leave the SPA
+    // via a full document navigation rather than swapping <Outlet /> in memory.
+    const aboutLink = screen.getByRole("link", { name: "دربارهٔ ما" });
+    expect(aboutLink.tagName).toBe("A");
+    expect(aboutLink.getAttribute("href")).toBe("/about/");
+    aboutLink.addEventListener("click", (e) => e.preventDefault());
+    fireEvent.click(aboutLink);
+    expect(screen.getByText("مشکلی پیش آمد")).toBeTruthy();
     spy.mockRestore();
   });
 

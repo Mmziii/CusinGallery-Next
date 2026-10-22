@@ -4,11 +4,14 @@ import { readFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import { safeNext, loginUrl } from "../lib/auth-navigation";
 
-const { asyncState } = vi.hoisted(() => ({ asyncState: { data: null, isLoading: false, error: { response: { status: 404, data: { detail: "یافت نشد." } } }, refetch: () => {} } }));
+const { asyncState, router } = vi.hoisted(() => ({
+  asyncState: { data: null, isLoading: false, error: { response: { status: 404, data: { detail: "یافت نشد." } } }, refetch: () => {} },
+  router: { push: vi.fn(), replace: vi.fn() },
+}));
 vi.mock("../hooks/useAsync", () => ({ useAsync: () => asyncState }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ orderId: "999" }), useSearchParams: () => new URLSearchParams(),
-  usePathname: () => "/account/orders/999/", useRouter: () => ({ push() {}, replace() {} }),
+  usePathname: () => "/account/orders/999/", useRouter: () => router,
 }));
 vi.mock("next/link", () => ({ default: ({ href, prefetch, children, ...rest }) => <a href={href} {...rest}>{children}</a> }));
 import OrderDetailPage from "../auth/account/OrderDetailPage";
@@ -42,10 +45,10 @@ it("login target uses a safe path and preserves original query order", () => {
   expect(loginUrl("/account/orders/?z=2&x=1")).toBe("/login/?next=%2Faccount%2Forders%2F%3Fz%3D2%26x%3D1");
   expect(loginUrl("//evil.com")).toBe("/login/?next=%2F");
 });
-it("new Next route prefixes have segment boundaries; SPA info pages stay document loads", async () => {
+it("all storefront paths are Next-owned; only Django paths stay document loads", async () => {
   const { isNextOwnedPath } = await import("../lib/navigation");
-  for (const path of ["/login/", "/register/", "/password-reset/", "/reset-password/confirm/?uid=abc&token=def", "/account/orders/3/", "/wishlist/", "/cart/", "/checkout/?step=delivery", "/payment/result/", "/payment/result/42/"]) expect(isNextOwnedPath(path)).toBe(true);
-  for (const path of ["/about/", "/contact/", "/shipping-returns/", "/terms/", "/privacy/", "/payment/callback/", "/accounting/", "/login-other/", "/carton/", "/checkout-old/"]) expect(isNextOwnedPath(path)).toBe(false);
+  for (const path of ["/login/", "/register/", "/password-reset/", "/reset-password/confirm/?uid=abc&token=def", "/account/orders/3/", "/wishlist/", "/cart/", "/checkout/?step=delivery", "/payment/result/", "/payment/result/42/", "/about/", "/contact/", "/shipping-returns/", "/terms/", "/privacy/", "/some/unknown/path/", "/about-x/", "/admin-guide/", "/api-docs/"]) expect(isNextOwnedPath(path)).toBe(true);
+  for (const path of ["/admin/", "/api/v1/products/", "/payment/callback/", "/media/pot.jpg", "/static/admin/css/base.css"]) expect(isNextOwnedPath(path)).toBe(false);
 });
 it("no ported page selects responsive markup using window width or native confirm", () => {
   for (const name of ["LoginPage", "RegisterPage", "PasswordResetRequestPage", "PasswordResetConfirmPage", "WishlistPage", "account/AccountLayout", "account/ProfilePage", "account/OrdersPage", "account/OrderDetailPage", "account/AddressesPage", "account/ReviewsPage"]) {
@@ -54,26 +57,31 @@ it("no ported page selects responsive markup using window width or native confir
   for (const name of ["CartPage", "CheckoutPage", "PaymentResultPage"]) {
     expect(read(`../purchase/${name}.jsx`)).not.toMatch(/useMediaQuery|window\.(innerWidth|matchMedia|confirm)/);
   }
+  expect(read("../info/InfoPage.jsx")).not.toMatch(/useMediaQuery|window\.(innerWidth|matchMedia|confirm)/);
 });
 
-it("next to SPA info pages is a full document navigation while Next purchase routes push/replace", async () => {
+it("storefront info and purchase routes use router push/replace while Django paths use window.location", async () => {
   const { useNavigate } = await import("../lib/navigation");
   const assign = vi.fn(), replace = vi.fn();
   vi.stubGlobal("window", { location: { assign, replace } });
   try {
+    router.push.mockClear();
+    router.replace.mockClear();
     const navigate = useNavigate();
     navigate(safeNext("/shipping-returns/"), { replace: true });
-    expect(replace).toHaveBeenCalledWith("/shipping-returns/");
+    expect(router.replace).toHaveBeenCalledWith("/shipping-returns/");
     navigate(safeNext("/about/"));
-    expect(assign).toHaveBeenCalledWith("/about/");
+    expect(router.push).toHaveBeenCalledWith("/about/");
+    navigate("/payment/callback/?Authority=A000");
+    expect(assign).toHaveBeenCalledWith("/payment/callback/?Authority=A000");
   } finally { vi.unstubAllGlobals(); }
 });
-it.each(["conf.d/cusin.conf", "prod.d/cusin.conf", "prod.d/00-bootstrap-http.conf.example"])("nginx %s routes phase 3a/3b to Next and keeps Django API/admin/callback", file => {
+it.each(["conf.d/cusin.conf", "prod.d/cusin.conf", "prod.d/00-bootstrap-http.conf.example"])("nginx %s routes storefront catch-all and phase 3a/3b to Next and keeps Django API/admin/callback/seo", file => {
   const text = read(`../../nginx/${file}`);
   for (const route of ["^/login/?$", "^/register/?$", "^/password-reset/?$", "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$", "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$"]) {
     const body = text.split(`location ~ ${route} {`)[1]?.split("}")[0];
     expect(body).toBeTruthy();
     for (const directive of ["proxy_pass http://web:3000;", "proxy_set_header Host $http_host;", "proxy_set_header X-Forwarded-Host $http_host;", "proxy_set_header X-Forwarded-Proto $scheme;", "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"]) expect(body).toContain(directive);
   }
-  for (const route of ["/api/", "/admin/", "/payment/callback/"]) expect(text.split(`location ${route} {`)[1]?.split("}")[0]).toContain("backend_upstream");
+  for (const route of ["/api/", "/admin/", "/payment/callback/", "/seo/"]) expect(text.split(`location ${route} {`)[1]?.split("}")[0]).toContain("backend_upstream");
 });

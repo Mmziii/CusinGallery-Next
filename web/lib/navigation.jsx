@@ -4,39 +4,36 @@ import NextLink from "next/link";
 import { usePathname, useSearchParams as useNextSearchParams, useRouter, useParams as nextUseParams } from "next/navigation";
 
 /**
- * Link/router shim for the page-by-page migration.
+ * Link/router shim for the storefront.
  *
- * Routes the Next app renders (phases 1-3b: home, catalog, auth, account,
- * wishlist, cart, checkout and payment result) use the Next router; routes the
- * old SPA still owns (static info pages and unknown-path 404) plus Django
- * callbacks (/payment/callback/) must be FULL DOCUMENT navigations, so they
- * render a plain <a href>.
+ * Every storefront path is owned by the Next app and uses the Next router.
+ * Plain <a href> / window.location document navigations remain ONLY for paths
+ * served directly by Django or Nginx (/admin/, /api/, /payment/callback/,
+ * /media/, /static/) and external/non-root-relative URLs.
  */
-const NEXT_OWNED_PREFIXES = [
-  "/shop",
-  "/products",
-  "/brands",
-  "/login",
-  "/register",
-  "/password-reset",
-  "/reset-password",
-  "/account",
-  "/wishlist",
-  "/cart",
-  "/checkout",
-  "/payment",
+export const DJANGO_OWNED_PREFIXES = [
+  "/admin",
+  "/api",
+  "/payment/callback",
+  "/media",
+  "/static",
 ];
 
-const hrefFor = (to) => typeof to === "string" ? to : `${to.pathname || "/"}${to.search || ""}${to.hash || ""}`;
+const hrefFor = (to) => typeof to === "string" ? to : `${to?.pathname || "/"}${to?.search || ""}${to?.hash || ""}`;
+
+export function isDjangoOwnedPath(to) {
+  const path = hrefFor(to).split(/[?#]/)[0];
+  return DJANGO_OWNED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
 
 export function isNextOwnedPath(to) {
   const path = hrefFor(to).split(/[?#]/)[0];
   if (!path || path === "/") return true;
-  if (path === "/payment/callback" || path.startsWith("/payment/callback/")) return false;
-  return NEXT_OWNED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+  if (!path.startsWith("/") || path.startsWith("//")) return false;
+  return !isDjangoOwnedPath(path);
 }
 
-// Unmigrated pages MUST be document navigations, not Next RSC requests.
+// Django-served paths and external URLs MUST be full document navigations.
 export function Link({ to, children, ...props }) {
   const href = hrefFor(to);
   return isNextOwnedPath(href)
@@ -45,7 +42,7 @@ export function Link({ to, children, ...props }) {
 }
 
 export function NavLink({ to, end, className, children, ...props }) {
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
   const target = hrefFor(to).split(/[?#]/)[0].replace(/\/$/, "") || "/";
   const current = pathname.replace(/\/$/, "") || "/";
   const isActive = current === target || (!end && target !== "/" && current.startsWith(`${target}/`));
