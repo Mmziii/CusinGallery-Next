@@ -1,11 +1,11 @@
 /**
- * Phases 2–3a: the SPA must hand Next-owned routes to the browser.
+ * Phases 2–3b: the SPA must hand Next-owned routes to the browser.
  *
- * Clicking a react-router <Link> to "/", "/shop/...", "/products/..." or
- * "/brands/..." used to render the SPA's own retired copy of that page (the
- * logo landing on the old home, categories opening the old shop). The helper
- * in utils/nextRoutes is the single switchboard: Next-owned URLs become plain
- * <a href> document links, everything else keeps react-router.
+ * Clicking a react-router <Link> to "/", "/shop/...", "/products/...",
+ * "/brands/...", auth/account/wishlist, or "/cart/", "/checkout/", "/payment/..."
+ * used to render the SPA's own retired copy of that page. The helper in
+ * utils/nextRoutes is the single switchboard: Next-owned URLs become plain
+ * <a href> document links, while static info pages keep react-router.
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -43,12 +43,23 @@ afterEach(() => {
 });
 
 describe("isNextOwnedPath", () => {
-  it.each(["/", "/shop", "/shop/", "/shop/?category=pots", "/products/copper-pot/", "/brands/mes-karan/", "/login/", "/account/orders/"])(
-    "claims %s",
-    (path) => expect(isNextOwnedPath(path)).toBe(true)
-  );
+  it.each([
+    "/",
+    "/shop",
+    "/shop/",
+    "/shop/?category=pots",
+    "/products/copper-pot/",
+    "/brands/mes-karan/",
+    "/login/",
+    "/account/orders/",
+    "/cart/",
+    "/checkout/",
+    "/checkout/?step=delivery",
+    "/payment/result/",
+    "/payment/result/42/",
+  ])("claims %s", (path) => expect(isNextOwnedPath(path)).toBe(true));
 
-  it.each(["/cart/", "/checkout/", "/about/", "/shopping-bags/", "/product-tour/"])(
+  it.each(["/about/", "/contact/", "/shipping-returns/", "/terms/", "/privacy/", "/shopping-bags/", "/product-tour/"])(
     "leaves %s to the SPA",
     (path) => expect(isNextOwnedPath(path)).toBe(false)
   );
@@ -56,13 +67,16 @@ describe("isNextOwnedPath", () => {
 
 describe("Link", () => {
   it.each([
-    ["/", "/cart/"],
-    ["/shop/", "/cart/"],
-    ["/shop/?category=pots", "/cart/"],
-    ["/products/copper-pot/", "/wishlist/"],
-    ["/brands/mes-karan/", "/account/orders/"],
-    ["/login/?next=%2Fcheckout%2F", "/checkout/"],
-    ["/account/orders/?x=1", "/cart/"],
+    ["/", "/about/"],
+    ["/shop/", "/about/"],
+    ["/shop/?category=pots", "/about/"],
+    ["/products/copper-pot/", "/contact/"],
+    ["/brands/mes-karan/", "/terms/"],
+    ["/login/?next=%2Fcheckout%2F", "/privacy/"],
+    ["/account/orders/?x=1", "/about/"],
+    ["/cart/", "/about/"],
+    ["/checkout/?step=delivery", "/about/"],
+    ["/payment/result/42/", "/about/"],
   ])("renders a plain anchor for the Next-owned %s", (to, route) => {
     const release = blockDocumentNavigation();
     renderAt(
@@ -84,12 +98,9 @@ describe("Link", () => {
   });
 
   it("keeps react-router for SPA-owned pages", () => {
-    renderAt(
-      "/",
-      <Link to="/cart/">cart</Link>
-    );
-    fireEvent.click(screen.getByText("cart"));
-    expect(screen.getByTestId("location").textContent).toBe("/cart/");
+    renderAt("/", <Link to="/about/">about</Link>);
+    fireEvent.click(screen.getByText("about"));
+    expect(screen.getByTestId("location").textContent).toBe("/about/");
   });
 });
 
@@ -119,31 +130,34 @@ describe("useNextNavigate", () => {
     );
   }
 
-  it.each(["/shop/?search=pot", "/login/?next=%2Fcheckout%2F", "/account/orders/?x=1"])("navigates the DOCUMENT for the Next-owned %s", (to) => {
-    const assign = vi.fn();
-    vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign, replace: vi.fn() });
-    renderAt("/cart/", <NavTo to={to} />);
+  it.each(["/shop/?search=pot", "/login/?next=%2Fcheckout%2F", "/account/orders/?x=1", "/cart/", "/checkout/?step=delivery", "/payment/result/42/"])(
+    "navigates the DOCUMENT for the Next-owned %s",
+    (to) => {
+      const assign = vi.fn();
+      vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign, replace: vi.fn() });
+      renderAt("/about/", <NavTo to={to} />);
 
-    fireEvent.click(screen.getByText(`go ${to}`));
+      fireEvent.click(screen.getByText(`go ${to}`));
 
-    expect(assign).toHaveBeenCalledWith(to);
-    expect(screen.getByTestId("location").textContent).toBe("/cart/");
-  });
+      expect(assign).toHaveBeenCalledWith(to);
+      expect(screen.getByTestId("location").textContent).toBe("/about/");
+    }
+  );
 
   it("keeps the router for an SPA-owned route", () => {
     const assign = vi.fn();
     vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign, replace: vi.fn() });
     renderAt(
-      "/cart/",
+      "/about/",
       <Routes>
-        <Route path="/cart/" element={<NavTo to="/checkout/" />} />
-        <Route path="/checkout/" element={<p>checkout page</p>} />
+        <Route path="/about/" element={<NavTo to="/contact/" />} />
+        <Route path="/contact/" element={<p>contact page</p>} />
       </Routes>
     );
 
-    fireEvent.click(screen.getByText("go /checkout/"));
+    fireEvent.click(screen.getByText("go /contact/"));
 
     expect(assign).not.toHaveBeenCalled();
-    expect(screen.getByText("checkout page")).toBeTruthy();
+    expect(screen.getByText("contact page")).toBeTruthy();
   });
 });

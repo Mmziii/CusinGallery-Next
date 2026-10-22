@@ -1,10 +1,10 @@
-import { isProtectedPath, isAuthPath } from "./lib/auth-navigation";
+import { isProtectedPath, isAuthPath, isPrivatePath } from "./lib/auth-navigation";
 import { NextResponse } from "next/server";
 
 import { CATALOG_KINDS, catalogSlugExists } from "./lib/catalog-availability";
 
 /**
- * Not-found shim for the catalog detail routes.
+ * Not-found shim for the catalog detail routes + headers for private/auth routes.
  *
  * Next 16.4 answers a `notFound()` thrown from a dynamic page with status 404
  * and an EMPTY document: React runs no error boundaries during server
@@ -28,7 +28,21 @@ import { CATALOG_KINDS, catalogSlugExists } from "./lib/catalog-availability";
  *  - `null` (upstream error/timeout) fails open: the page renders exactly as
  *    before rather than turning an API hiccup into a 404 for a real product.
  */
-export const config = { matcher: ["/products/:path*", "/brands/:path*", "/account/:path*", "/wishlist/:path*", "/login/:path*", "/register/:path*", "/password-reset/:path*", "/reset-password/:path*"] };
+export const config = {
+  matcher: [
+    "/products/:path*",
+    "/brands/:path*",
+    "/account/:path*",
+    "/wishlist/:path*",
+    "/checkout/:path*",
+    "/cart/:path*",
+    "/payment/:path*",
+    "/login/:path*",
+    "/register/:path*",
+    "/password-reset/:path*",
+    "/reset-password/:path*",
+  ],
+};
 
 // Only the canonical detail page: /products/<slug>/ and /brands/<slug>/ with
 // the trailing slash (next.config.mjs sets trailingSlash). The slash-less
@@ -39,7 +53,7 @@ const DETAIL_PAGE = /^\/(products|brands)\/([^/]+)\/$/;
 export async function proxy(request) {
   if (request.method !== "GET" && request.method !== "HEAD") return NextResponse.next();
   const url = new URL(request.url);
-  if (isProtectedPath(url.pathname) || isAuthPath(url.pathname)) {
+  if (isProtectedPath(url.pathname) || isAuthPath(url.pathname) || isPrivatePath(url.pathname)) {
     // Overwrite, never trust a browser-supplied path header. The RSC gate uses
     // this exact query string rather than rebuilding/reordering searchParams.
     const forwarded = new Headers(request.headers);

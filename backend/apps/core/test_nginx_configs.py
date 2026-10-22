@@ -340,7 +340,8 @@ class NginxSecurityHeaderTests(SimpleTestCase):
         """
         routes = ("^/shop/?$", "^/products/[^/]+/?$", "^/brands/[^/]+/?$",
                   "^/login/?$", "^/register/?$", "^/password-reset/?$",
-                  "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$")
+                  "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$",
+                  "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$")
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             for route in routes:
@@ -359,16 +360,18 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                 self.assertNotIn("/seo/", source)
 
     def test_auth_account_wishlist_keep_public_host_and_backend_routes(self):
-        """Phase 3a: private pages go to Next, not API/admin/payment callbacks."""
+        """Phase 3a/3b: private & purchase pages go to Next; API/admin/payment callbacks stay on Django."""
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             for route in ("^/login/?$", "^/register/?$", "^/password-reset/?$",
-                          "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$"):
+                          "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$",
+                          "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$"):
                 body = self._location_body(source, f"location ~ {route}")
                 with self.subTest(config=path.name, route=route):
                     self.assertIsNotNone(body)
                     self.assertIn("proxy_set_header X-Forwarded-Host $http_host;", body)
                     self.assertIn("proxy_set_header X-Real-IP $remote_addr;", body)
+                    self.assertNotRegex("/payment/callback/", route)
             for route in ("/api/", "/admin/", "/payment/callback/"):
                 body = self._location_body(source, f"location {route}")
                 with self.subTest(config=path.name, route=route):

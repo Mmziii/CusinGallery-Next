@@ -129,8 +129,20 @@ describe("proxy: catalog slugs that Django says are gone", () => {
     expect(broken.headers.get("x-middleware-next")).toBe("1");
   });
 
-  it("runs on catalog and phase-3a private/auth prefixes", () => {
-    expect(config.matcher).toEqual(["/products/:path*", "/brands/:path*", "/account/:path*", "/wishlist/:path*", "/login/:path*", "/register/:path*", "/password-reset/:path*", "/reset-password/:path*"]);
+  it("runs on catalog and phase-3a/3b private/auth prefixes", () => {
+    expect(config.matcher).toEqual([
+      "/products/:path*",
+      "/brands/:path*",
+      "/account/:path*",
+      "/wishlist/:path*",
+      "/checkout/:path*",
+      "/cart/:path*",
+      "/payment/:path*",
+      "/login/:path*",
+      "/register/:path*",
+      "/password-reset/:path*",
+      "/reset-password/:path*",
+    ]);
   });
 });
 

@@ -7,11 +7,12 @@ import { useEffect, useState } from "react";
  * from components.
  */
 export function useMediaQuery(query) {
-  const [matches, setMatches] = useState(
-    false
-  );
+  const [matches, setMatches] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
     const mediaQueryList = window.matchMedia(query);
     setMatches(mediaQueryList.matches);
     const listener = (event) => setMatches(event.matches);

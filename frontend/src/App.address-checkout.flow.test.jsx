@@ -5,7 +5,7 @@
  * response shape as Django REST Framework.
  */
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import App from "./App";
@@ -84,10 +84,29 @@ async function walkToReviewStep(onAddressStep) {
   await screen.findByRole("heading", { name: /۴\. بازبینی و پرداخت/ });
 }
 
+function DocumentLinkBridge() {
+  const navigate = useNavigate();
+  return (
+    <div
+      style={{ display: "contents" }}
+      onClickCapture={(event) => {
+        const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
+        const href = anchor?.getAttribute("href");
+        if (href && href.startsWith("/")) {
+          event.preventDefault();
+          navigate(href);
+        }
+      }}
+    >
+      <App />
+    </div>
+  );
+}
+
 function renderLoggedInApp() {
   return render(
     <MemoryRouter initialEntries={["/account/addresses/"]}>
-      <App />
+      <DocumentLinkBridge />
     </MemoryRouter>
   );
 }

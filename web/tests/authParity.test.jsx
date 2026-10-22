@@ -42,32 +42,35 @@ it("login target uses a safe path and preserves original query order", () => {
   expect(loginUrl("/account/orders/?z=2&x=1")).toBe("/login/?next=%2Faccount%2Forders%2F%3Fz%3D2%26x%3D1");
   expect(loginUrl("//evil.com")).toBe("/login/?next=%2F");
 });
-it("new Next route prefixes have segment boundaries; SPA cart/checkout stay document loads", async () => {
+it("new Next route prefixes have segment boundaries; SPA info pages stay document loads", async () => {
   const { isNextOwnedPath } = await import("../lib/navigation");
-  for (const path of ["/login/", "/register/", "/password-reset/", "/reset-password/confirm/?uid=abc&token=def", "/account/orders/3/", "/wishlist/"]) expect(isNextOwnedPath(path)).toBe(true);
-  for (const path of ["/cart/", "/checkout/?step=delivery", "/payment/result/", "/accounting/", "/login-other/"]) expect(isNextOwnedPath(path)).toBe(false);
+  for (const path of ["/login/", "/register/", "/password-reset/", "/reset-password/confirm/?uid=abc&token=def", "/account/orders/3/", "/wishlist/", "/cart/", "/checkout/?step=delivery", "/payment/result/", "/payment/result/42/"]) expect(isNextOwnedPath(path)).toBe(true);
+  for (const path of ["/about/", "/contact/", "/shipping-returns/", "/terms/", "/privacy/", "/payment/callback/", "/accounting/", "/login-other/", "/carton/", "/checkout-old/"]) expect(isNextOwnedPath(path)).toBe(false);
 });
 it("no ported page selects responsive markup using window width or native confirm", () => {
   for (const name of ["LoginPage", "RegisterPage", "PasswordResetRequestPage", "PasswordResetConfirmPage", "WishlistPage", "account/AccountLayout", "account/ProfilePage", "account/OrdersPage", "account/OrderDetailPage", "account/AddressesPage", "account/ReviewsPage"]) {
     expect(read(`../auth/${name}.jsx`)).not.toMatch(/useMediaQuery|window\.(innerWidth|matchMedia|confirm)/);
   }
+  for (const name of ["CartPage", "CheckoutPage", "PaymentResultPage"]) {
+    expect(read(`../purchase/${name}.jsx`)).not.toMatch(/useMediaQuery|window\.(innerWidth|matchMedia|confirm)/);
+  }
 });
 
-it("next to SPA checkout/cart is a full document navigation, not a Next router push", async () => {
+it("next to SPA info pages is a full document navigation while Next purchase routes push/replace", async () => {
   const { useNavigate } = await import("../lib/navigation");
   const assign = vi.fn(), replace = vi.fn();
   vi.stubGlobal("window", { location: { assign, replace } });
   try {
     const navigate = useNavigate();
-    navigate(safeNext("/checkout/?step=delivery"), { replace: true });
-    expect(replace).toHaveBeenCalledWith("/checkout/?step=delivery");
-    navigate(safeNext("/cart/"));
-    expect(assign).toHaveBeenCalledWith("/cart/");
+    navigate(safeNext("/shipping-returns/"), { replace: true });
+    expect(replace).toHaveBeenCalledWith("/shipping-returns/");
+    navigate(safeNext("/about/"));
+    expect(assign).toHaveBeenCalledWith("/about/");
   } finally { vi.unstubAllGlobals(); }
 });
-it.each(["conf.d/cusin.conf", "prod.d/cusin.conf", "prod.d/00-bootstrap-http.conf.example"])("nginx %s routes phase 3a to Next and keeps Django API/admin/callback", file => {
+it.each(["conf.d/cusin.conf", "prod.d/cusin.conf", "prod.d/00-bootstrap-http.conf.example"])("nginx %s routes phase 3a/3b to Next and keeps Django API/admin/callback", file => {
   const text = read(`../../nginx/${file}`);
-  for (const route of ["^/login/?$", "^/register/?$", "^/password-reset/?$", "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$"]) {
+  for (const route of ["^/login/?$", "^/register/?$", "^/password-reset/?$", "^/reset-password(?:/.*)?$", "^/account(?:/.*)?$", "^/wishlist/?$", "^/cart/?$", "^/checkout/?$", "^/payment/result(?:/.*)?$"]) {
     const body = text.split(`location ~ ${route} {`)[1]?.split("}")[0];
     expect(body).toBeTruthy();
     for (const directive of ["proxy_pass http://web:3000;", "proxy_set_header Host $http_host;", "proxy_set_header X-Forwarded-Host $http_host;", "proxy_set_header X-Forwarded-Proto $scheme;", "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"]) expect(body).toContain(directive);

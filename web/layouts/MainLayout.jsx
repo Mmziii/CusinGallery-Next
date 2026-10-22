@@ -59,7 +59,7 @@ function MainLayout({ children }) {
     // force reflow so the animation restarts
     void node.offsetWidth;
     node.classList.add("route-fade");
-    window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    window.scrollTo({ top: 0, behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "instant" : "smooth" });
   }, [location.pathname]);
 
   return (
