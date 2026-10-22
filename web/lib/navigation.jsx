@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import NextLink from "next/link";
 import { usePathname, useSearchParams as useNextSearchParams, useRouter, useParams as nextUseParams } from "next/navigation";
 
@@ -73,10 +73,13 @@ export const useParams = () => nextUseParams();
 export function useSearchParams() {
   const pathname = usePathname() || "/";
   const params = useNextSearchParams();
-  const navigate = useNavigate();
   const raw = params?.toString() || "";
-  const setSearchParams = (nextInit, options = {}) => {
-    const prev = new URLSearchParams(raw);
+  const queryRef = useRef({ pathname, raw });
+  queryRef.current = { pathname, raw };
+
+  const setSearchParams = useCallback((nextInit, options = {}) => {
+    const { pathname: currentPath, raw: currentRaw } = queryRef.current;
+    const prev = new URLSearchParams(currentRaw);
     const resolved = typeof nextInit === "function" ? nextInit(prev) : nextInit;
     const next =
       resolved instanceof URLSearchParams
@@ -87,8 +90,16 @@ export function useSearchParams() {
               Object.entries(resolved || {}).filter(([, v]) => v !== undefined && v !== null)
             );
     const query = next.toString();
-    navigate(`${pathname}${query ? `?${query}` : ""}`, options);
-  };
+    if (query === currentRaw) return;
+    queryRef.current = { pathname: currentPath, raw: query };
+    const url = `${currentPath}${query ? `?${query}` : ""}`;
+    if (options.replace) {
+      window.history.replaceState(null, "", url);
+    } else {
+      window.history.pushState(null, "", url);
+    }
+  }, []);
+
   return [new URLSearchParams(raw), setSearchParams];
 }
 

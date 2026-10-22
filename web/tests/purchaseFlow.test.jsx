@@ -16,6 +16,8 @@ const navState = vi.hoisted(() => ({
   history: ["/checkout/"],
   index: 0,
   calls: [],
+  routerPush: vi.fn(),
+  routerReplace: vi.fn(),
   listeners: new Set(),
   reset(initialUrl = "/checkout/") {
     const parsed = new URL(initialUrl, "http://cusin.local");
@@ -24,6 +26,24 @@ const navState = vi.hoisted(() => ({
     this.history = [`${parsed.pathname}${parsed.search}`];
     this.index = 0;
     this.calls = [];
+    this.routerPush.mockReset();
+    this.routerReplace.mockReset();
+    this.routerPush.mockImplementation((href) =>
+      new Promise((resolve) => {
+        setTimeout(() => {
+          this.applyUrl(href, "push");
+          resolve();
+        }, 35);
+      })
+    );
+    this.routerReplace.mockImplementation((href) =>
+      new Promise((resolve) => {
+        setTimeout(() => {
+          this.applyUrl(href, "replace");
+          resolve();
+        }, 35);
+      })
+    );
   },
   applyUrl(href, mode) {
     const parsed = new URL(href, "http://cusin.local");
@@ -47,6 +67,9 @@ const navState = vi.hoisted(() => ({
     const parsed = new URL(this.history[target], "http://cusin.local");
     this.pathname = parsed.pathname;
     this.search = parsed.search;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
     this.listeners.forEach((fn) => fn());
   },
 }));
@@ -72,8 +95,8 @@ vi.mock("next/navigation", () => ({
   },
   useParams: () => navState.params,
   useRouter: () => ({
-    push: (href) => navState.applyUrl(href, "push"),
-    replace: (href) => navState.applyUrl(href, "replace"),
+    push: (href) => navState.routerPush(href),
+    replace: (href) => navState.routerReplace(href),
     back: () => navState.go(-1),
     refresh: () => {},
   }),
@@ -88,7 +111,8 @@ vi.mock("next/link", () => ({
         onClick?.(e);
         if (!e.defaultPrevented) {
           e.preventDefault();
-          navState.applyUrl(href, replace ? "replace" : "push");
+          if (replace) navState.routerReplace(href);
+          else navState.routerPush(href);
         }
       }}
     >
@@ -438,12 +462,22 @@ afterAll(async () => {
 let root;
 let container;
 let redirectedUrls;
+let historyPushSpy;
+let historyReplaceSpy;
 
 function mount(element, url = "/checkout/?step=delivery") {
   navState.reset(url);
+  historyPushSpy?.mockClear();
+  historyReplaceSpy?.mockClear();
   container = document.createElement("div");
   document.body.appendChild(container);
   root = createRoot(container);
+  act(() => {
+    root.render(<SiteProvider value={{ settings: db.settings, content: {} }}>{element}</SiteProvider>);
+  });
+}
+
+function rerender(element) {
   act(() => {
     root.render(<SiteProvider value={{ settings: db.settings, content: {} }}>{element}</SiteProvider>);
   });
@@ -511,6 +545,16 @@ beforeEach(() => {
     return realFetch(input, init);
   });
 
+  historyPushSpy = vi.spyOn(window.history, "pushState").mockImplementation((_state, _unused, url) => {
+    navState.applyUrl(String(url), "push");
+  });
+  historyReplaceSpy = vi.spyOn(window.history, "replaceState").mockImplementation((_state, _unused, url) => {
+    navState.applyUrl(String(url), "replace");
+  });
+  vi.spyOn(window.history, "go").mockImplementation((delta) => navState.go(delta));
+  vi.spyOn(window.history, "back").mockImplementation(() => navState.go(-1));
+  vi.spyOn(window.history, "forward").mockImplementation(() => navState.go(1));
+
   vi.stubGlobal(
     "location",
     Object.assign(new URL("http://cusin.local/checkout/?step=delivery"), {
@@ -543,26 +587,45 @@ afterEach(() => {
 });
 
 describe("checkout step contract, guards, back/forward, and analytics", () => {
-  it("replaces missing or invalid ?step with ?step=delivery", async () => {
+  it("replaces missing or invalid ?step with ?step=delivery via History API once without calling router.push/replace", async () => {
     mount(<CheckoutPage />, "/checkout/");
 
-    await waitUntil(() => {
-      expect(navState.search).toBe("?step=delivery");
-      expect(container.textContent).toContain("۲. انتخاب روش تحویل");
-    });
-    expect(navState.calls[0]).toEqual({ href: "/checkout/?step=delivery", replace: true });
+    // Synchronous History API normalization: updates URL immediately without RSC round-trip.
+    expect(navState.search).toBe("?step=delivery");
+    expect(historyReplaceSpy).toHaveBeenCalledTimes(1);
+    expect(historyReplaceSpy).toHaveBeenLastCalledWith(null, "", "/checkout/?step=delivery");
+    expect(historyPushSpy).not.toHaveBeenCalled();
+
+    // Wait for async shipping/address/cart updates + force multiple extra re-renders:
+    // normalization MUST still have written history only ONCE and NEVER called router.push/replace.
+    await waitUntil(() => expect(container.textContent).toContain("ارسال عادی"));
+    expect(container.textContent).toContain("۲. انتخاب روش تحویل");
+    rerender(<CheckoutPage />);
+    rerender(<CheckoutPage />);
+    rerender(<CheckoutPage />);
+
+    expect(historyReplaceSpy).toHaveBeenCalledTimes(1);
+    expect(historyPushSpy).not.toHaveBeenCalled();
+    expect(navState.routerPush).not.toHaveBeenCalled();
+    expect(navState.routerReplace).not.toHaveBeenCalled();
 
     act(() => root.unmount());
     container.remove();
 
     mount(<CheckoutPage />, "/checkout/?step=invalid");
-    await waitUntil(() => {
-      expect(navState.search).toBe("?step=delivery");
-    });
-    expect(navState.calls[0]).toEqual({ href: "/checkout/?step=delivery", replace: true });
+    await waitUntil(() => expect(container.textContent).toContain("ارسال عادی"));
+    rerender(<CheckoutPage />);
+    rerender(<CheckoutPage />);
+
+    expect(navState.search).toBe("?step=delivery");
+    expect(historyReplaceSpy).toHaveBeenCalledTimes(1);
+    expect(historyReplaceSpy).toHaveBeenLastCalledWith(null, "", "/checkout/?step=delivery");
+    expect(historyPushSpy).not.toHaveBeenCalled();
+    expect(navState.routerPush).not.toHaveBeenCalled();
+    expect(navState.routerReplace).not.toHaveBeenCalled();
   });
 
-  it("guards ?step=review back to ?step=address when no valid address exists, and supports back/forward per step", async () => {
+  it("guards ?step=review back to ?step=address when no valid address exists, and supports back/forward per step without router round-trips", async () => {
     db.addresses = [];
     mount(<CheckoutPage />, "/checkout/?step=review");
 
@@ -570,8 +633,11 @@ describe("checkout step contract, guards, back/forward, and analytics", () => {
       expect(navState.search).toBe("?step=address");
       expect(container.textContent).toContain("۳. اطلاعات تحویل");
     });
-    // Guard must replace history rather than push, and never expose order placement early.
-    expect(navState.calls.some((c) => c.href === "/checkout/?step=address" && c.replace === true)).toBe(true);
+    // Guard must replace history once rather than push, never call router.push/replace, and never expose order placement early.
+    expect(historyReplaceSpy).toHaveBeenCalledTimes(1);
+    expect(historyReplaceSpy).toHaveBeenLastCalledWith(null, "", "/checkout/?step=address");
+    expect(navState.routerPush).not.toHaveBeenCalled();
+    expect(navState.routerReplace).not.toHaveBeenCalled();
     expect(container.textContent).not.toContain("ثبت سفارش و پرداخت");
 
     // Now test full forward & browser back/forward navigation across steps with a saved address.
@@ -583,21 +649,30 @@ describe("checkout step contract, guards, back/forward, and analytics", () => {
     await waitUntil(() => expect(container.textContent).toContain("ارسال عادی"));
 
     click([...container.querySelectorAll("button")].find((b) => b.textContent.includes("ادامه: اطلاعات تحویل")));
-    await waitUntil(() => expect(navState.search).toBe("?step=address"));
+    expect(navState.search).toBe("?step=address");
+    expect(container.textContent).toContain("۳. اطلاعات تحویل");
 
     click([...container.querySelectorAll("button")].find((b) => b.textContent.includes("ادامه: بازبینی و پرداخت")));
-    await waitUntil(() => expect(navState.search).toBe("?step=review"));
+    expect(navState.search).toBe("?step=review");
     expect(container.textContent).toContain("۴. بازبینی و پرداخت");
 
+    expect(historyPushSpy).toHaveBeenCalledTimes(2);
+    expect(historyReplaceSpy).not.toHaveBeenCalled();
+    expect(navState.routerPush).not.toHaveBeenCalled();
+    expect(navState.routerReplace).not.toHaveBeenCalled();
+
     // Browser Back: review -> address -> delivery; Browser Forward: delivery -> address -> review
-    act(() => navState.go(-1));
-    await waitUntil(() => expect(container.textContent).toContain("۳. اطلاعات تحویل"));
-    act(() => navState.go(-1));
-    await waitUntil(() => expect(container.textContent).toContain("۲. انتخاب روش تحویل"));
-    act(() => navState.go(1));
-    await waitUntil(() => expect(container.textContent).toContain("۳. اطلاعات تحویل"));
-    act(() => navState.go(1));
-    await waitUntil(() => expect(container.textContent).toContain("۴. بازبینی و پرداخت"));
+    act(() => window.history.back());
+    expect(container.textContent).toContain("۳. اطلاعات تحویل");
+    act(() => window.history.back());
+    expect(container.textContent).toContain("۲. انتخاب روش تحویل");
+    act(() => window.history.forward());
+    expect(container.textContent).toContain("۳. اطلاعات تحویل");
+    act(() => window.history.forward());
+    expect(container.textContent).toContain("۴. بازبینی و پرداخت");
+
+    expect(navState.routerPush).not.toHaveBeenCalled();
+    expect(navState.routerReplace).not.toHaveBeenCalled();
 
     flushEvents();
     await waitUntil(() => {
@@ -927,6 +1002,66 @@ describe("cart ConfirmDialog, guest cart hydration, and post-login cart merge", 
     });
     expect(useCartStore.getState().guestLines).toEqual([]);
     expect(nativeConfirm).not.toHaveBeenCalled();
+  });
+
+  it("seeds and renders a fresh serverCart over an older non-guest store cart without overwriting a guest cart", async () => {
+    const staleStoreCart = {
+      item_count: 1,
+      subtotal: 300000,
+      items: [
+        {
+          id: 101,
+          quantity: 1,
+          available_stock: 5,
+          is_available: true,
+          line_total: 300000,
+          product: { id: 10, name: "قابلمه قدیمی", slug: "old-pot", primary_image: null },
+          variant: null,
+          price_info: { price: 300000 },
+        },
+      ],
+    };
+    const freshServerCart = {
+      item_count: 2,
+      subtotal: 950000,
+      items: [
+        {
+          id: 202,
+          quantity: 2,
+          available_stock: 4,
+          is_available: true,
+          line_total: 950000,
+          product: { id: 22, name: "سرویس کارد جدید", slug: "new-knife-set", primary_image: null },
+          variant: null,
+          price_info: { price: 475000 },
+        },
+      ],
+    };
+
+    // Store already holds an older non-guest cart from earlier client navigation.
+    useCartStore.setState({ cart: staleStoreCart, isLoading: false, error: null });
+
+    mount(<CartPage serverCart={freshServerCart} />, "/cart/");
+
+    // Fresh serverCart immediately wins both in rendered DOM AND in Zustand store, with no extra GET /cart/.
+    expect(container.textContent).toContain("سرویس کارد جدید");
+    expect(container.textContent).toContain(formatPrice(950000));
+    expect(container.textContent).not.toContain("قابلمه قدیمی");
+    expect(useCartStore.getState().cart).toEqual(freshServerCart);
+    expect(requests.filter((r) => r.path === "/api/v1/cart/")).toHaveLength(0);
+
+    // Conversely, a pending guest cart in the store must NEVER be overwritten by serverCart.
+    act(() => root.unmount());
+    container.remove();
+    act(() => {
+      useCartStore.getState().addGuestItem(10, 55, 2);
+    });
+    const pendingGuestCart = useCartStore.getState().cart;
+    expect(pendingGuestCart.guest).toBe(true);
+
+    mount(<CartPage serverCart={freshServerCart} />, "/cart/");
+    expect(useCartStore.getState().cart).toBe(pendingGuestCart);
+    expect(useCartStore.getState().guestLines).toEqual([{ product_id: 10, variant_id: 55, quantity: 2 }]);
   });
 });
 

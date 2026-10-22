@@ -1,7 +1,7 @@
 "use client";
 import { faDigits } from "../utils/faDigits";
 import PropTypes from "prop-types";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "../lib/navigation";
 
 import PriceTag from "../components/PriceTag";
@@ -225,18 +225,26 @@ function CartPage({ serverCart }) {
   const { cart, isLoading, error, fetchCart, updateItem, removeItem } = useCartStore();
   // PR 20: styled confirm dialog instead of the native confirm prompt.
   const { confirm, dialog } = useConfirm();
+  const seededRef = useRef(undefined);
 
   useEffect(() => {
-    if (serverCart && useCartStore.getState().cart === null) {
+    if (!serverCart) return;
+    const current = useCartStore.getState().cart;
+    if (!current || !current.guest) {
+      seededRef.current = serverCart;
       useCartStore.setState({ cart: serverCart, isLoading: false, error: null });
     }
   }, [serverCart]);
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && !serverCart) fetchCart();
-  }, [authLoading, isAuthenticated, serverCart, fetchCart]);
+    if (!authLoading && isAuthenticated && !serverCart && !cart?.guest) fetchCart();
+  }, [authLoading, isAuthenticated, serverCart, cart?.guest, fetchCart]);
 
-  const activeCart = (cart && !cart.guest ? cart : null) ?? serverCart ?? null;
+  const activeCart = cart?.guest
+    ? null
+    : serverCart && seededRef.current !== serverCart
+      ? serverCart
+      : cart ?? serverCart ?? null;
 
   if (authLoading || (isLoading && !activeCart)) return <Spinner label="در حال دریافت سبد خرید…" />;
 
