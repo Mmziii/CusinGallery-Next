@@ -7,8 +7,11 @@ import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 // upstream failure for a missing product.
 import {
   CATALOG_KINDS,
+  INFO_PAGE_SLUGS,
   catalogPath,
   catalogSlugExists,
+  infoPageExists,
+  infoPagePath,
   resetCatalogAvailability,
 } from "../lib/catalog-availability";
 
@@ -120,4 +123,34 @@ it("shares one request between concurrent lookups", async () => {
 
   expect([first, second, third]).toEqual([false, false, false]);
   expect(received).toHaveLength(1);
+});
+
+it("checks owner-editable info pages via /api/v1/site/pages/<slug>/ and fails open on errors", async () => {
+  expect([...INFO_PAGE_SLUGS]).toEqual([
+    "about",
+    "contact",
+    "shipping-returns",
+    "terms",
+    "privacy",
+  ]);
+  expect(infoPagePath("shipping-returns")).toBe("/api/v1/site/pages/shipping-returns/");
+
+  respond = (_req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ slug: "about", title: "درباره ما", body: "<p>متن</p>" }));
+  };
+  expect(await infoPageExists("about", requestMeta)).toBe(true);
+  expect(received.at(-1).url).toBe("/api/v1/site/pages/about/");
+
+  respond = (_req, res) => {
+    res.writeHead(404, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ detail: "Not found." }));
+  };
+  expect(await infoPageExists("terms", requestMeta)).toBe(false);
+
+  respond = (_req, res) => {
+    res.writeHead(503, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ detail: "unavailable" }));
+  };
+  expect(await infoPageExists("contact", requestMeta)).toBeNull();
 });

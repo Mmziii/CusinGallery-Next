@@ -302,22 +302,25 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                 fallback = block
             start = index + len(header)
 
-    def test_storefront_pages_reach_the_backend_catch_all(self):
-        """Audit 19 item 5: page requests must reach Django's catch-all.
+    def test_storefront_catch_all_reaches_the_next_app(self):
+        """Phase 4: `location /` proxies the Next app (`http://web:3000`).
 
-        While nginx answered every path with the built index.html, an unknown
-        URL was a 200 with the 404 design (a soft 404). The catch-all view
-        (apps/core/spa.py) is the only layer that knows both the SPA's route
-        table and the product/category slugs, so `location /` must proxy the
-        backend -- and the build output must still come from the frontend
-        container, which is the only place those files exist.
+        Every storefront route (including owner-editable info pages and the
+        unknown-path 404) is now rendered by Next, while legacy SPA static
+        asset directories stay on `frontend_upstream` until phase 5 cleanup.
         """
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             block = self._location_body(source, "location / {")
             with self.subTest(config=path.name):
                 self.assertIsNotNone(block, f"{path.name}: no `location /`")
-                self.assertIn("proxy_pass http://backend_upstream;", block)
+                self.assertIn("proxy_pass http://web:3000;", block)
+                self.assertIn("proxy_set_header Host $http_host;", block)
+                self.assertIn("proxy_set_header X-Real-IP $remote_addr;", block)
+                self.assertIn("proxy_set_header X-Forwarded-Proto $scheme;", block)
+                self.assertIn("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", block)
+                self.assertIn("proxy_set_header X-Forwarded-Host $http_host;", block)
+                self.assertNotIn("proxy_pass http://backend_upstream;", block)
                 self.assertNotIn("proxy_pass http://frontend_upstream;", block)
             for asset in ("/assets/", "/fonts/", "/brand/"):
                 with self.subTest(config=path.name, asset=asset):
@@ -327,6 +330,17 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                         f"{path.name}: the built bundle/fonts/brand files must be "
                         f"served by the frontend container",
                     )
+            for favicon in ("/favicon.svg", "/favicon.ico"):
+                with self.subTest(config=path.name, favicon=favicon):
+                    self.assertRegex(
+                        source,
+                        r"location = " + re.escape(favicon) + r" \{[^}]*frontend_upstream",
+                    )
+            with self.subTest(config=path.name, next_assets="/_next/"):
+                self.assertRegex(
+                    source,
+                    r"location \^~ /_next/ \{[^}]*http://web:3000",
+                )
 
     def test_catalog_pages_are_served_by_the_next_app(self):
         """Phase 2: /shop/, /products/<slug>/ and /brands/<slug>/ are Next SSR.
@@ -354,13 +368,22 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                     self.assertIn("proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", body)
                     self.assertNotIn("backend_upstream", body)
                     self.assertNotIn("frontend_upstream", body)
-            # The bot-only diversion is gone from every stack.
+            # The bot-only diversion is gone from every stack (only the explicit
+            # `location /seo/` backend block remains until phase 5).
             with self.subTest(config=path.name, block="crawler map"):
                 self.assertNotIn("$cusin_is_bot", source)
-                self.assertNotIn("/seo/", source)
+                self.assertNotRegex(source, r"rewrite\s+[^\n]*/seo/")
 
     def test_auth_account_wishlist_keep_public_host_and_backend_routes(self):
-        """Phase 3a/3b: private & purchase pages go to Next; API/admin/payment callbacks stay on Django."""
+        """Phase 3-4: storefront routes go to Next; every Django path stays on backend/volumes."""
+        protected_django_samples = (
+            "/api/",
+            "/api/v1/products/",
+            "/admin/",
+            "/admin/login/",
+            "/admin/products/product/image-import/",
+            "/payment/callback/",
+        )
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             for route in ("^/login/?$", "^/register/?$", "^/password-reset/?$",
@@ -372,20 +395,59 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                     self.assertIn("proxy_set_header X-Forwarded-Host $http_host;", body)
                     self.assertIn("proxy_set_header X-Real-IP $remote_addr;", body)
                     self.assertNotRegex("/payment/callback/", route)
-            for route in ("/api/", "/admin/", "/payment/callback/"):
+
+            # No Next regex or non-root prefix location may match /api/, /admin/, or /payment/callback/.
+            for header, body in location_blocks(source):
+                if "http://web:3000" not in body:
+                    continue
+                spec = header[len("location"):].strip()
+                if spec in ("/", "= /"):
+                    continue
+                with self.subTest(config=path.name, next_location=header):
+                    if spec.startswith("~*"):
+                        pattern = spec[2:].strip().strip("\"'")
+                        for sample in protected_django_samples:
+                            self.assertIsNone(re.search(pattern, sample, re.IGNORECASE))
+                    elif spec.startswith("~"):
+                        pattern = spec[1:].strip().strip("\"'")
+                        for sample in protected_django_samples:
+                            self.assertIsNone(re.search(pattern, sample))
+                    else:
+                        prefix = spec.lstrip("^~").strip()
+                        for sample in protected_django_samples:
+                            self.assertFalse(sample.startswith(prefix))
+
+            for route in ("/api/", "/admin/", "/payment/callback/", "/seo/"):
                 body = self._location_body(source, f"location {route}")
                 with self.subTest(config=path.name, route=route):
-                    self.assertIsNotNone(body)
+                    self.assertIsNotNone(body, f"{path.name}: missing `location {route}`")
                     self.assertIn("backend_upstream", body)
                     self.assertNotIn("web:3000", body)
 
-    def test_seo_routes_reach_the_backend_in_every_config(self):
-        """/robots.txt and /sitemap.xml are rendered by Django, not the SPA.
+            for exact in ("/healthz", "/robots.txt", "/sitemap.xml"):
+                body = self._location_body(source, f"location = {exact}")
+                with self.subTest(config=path.name, route=exact):
+                    self.assertIsNotNone(body, f"{path.name}: missing `location = {exact}`")
+                    self.assertIn("backend_upstream", body)
+                    self.assertNotIn("web:3000", body)
 
-        Without an exact-match location the SPA fallback answers them with
-        index.html, so crawlers were served an HTML shell instead of the
-        robots policy / the product sitemap.
-        """
+            for static_dir, alias_dir in (("/static/", "/app/staticfiles/"), ("/media/", "/app/media/")):
+                body = self._location_body(source, f"location {static_dir}", want="alias")
+                with self.subTest(config=path.name, route=static_dir):
+                    self.assertIsNotNone(body, f"{path.name}: missing `location {static_dir}`")
+                    self.assertIn(f"alias {alias_dir};", body)
+                    self.assertNotIn("web:3000", body)
+
+        for path in (NGINX_ROOT / "conf.d" / "cusin.conf", NGINX_ROOT / "prod.d" / "cusin.conf"):
+            source = strip_comments(path.read_text(encoding="utf-8"))
+            body = self._location_body(source, "location ^~ /admin/products/product/image-import/")
+            with self.subTest(config=path.name, route="admin image-import"):
+                self.assertIsNotNone(body)
+                self.assertIn("backend_upstream", body)
+                self.assertNotIn("web:3000", body)
+
+    def test_seo_routes_reach_the_backend_in_every_config(self):
+        """/robots.txt, /sitemap.xml and /seo/ are rendered by Django, not Next."""
         for path in NGINX_FILES:
             source = strip_comments(path.read_text(encoding="utf-8"))
             for route in ("/robots.txt", "/sitemap.xml"):
@@ -395,3 +457,9 @@ class NginxSecurityHeaderTests(SimpleTestCase):
                         rf"location\s+=\s+{route}\s*\{{[^}}]*backend_upstream",
                         f"{path.name}: {route} must be proxied to the backend",
                     )
+            with self.subTest(config=path.name, route="/seo/"):
+                self.assertRegex(
+                    source,
+                    r"location\s+/seo/\s*\{[^}]*backend_upstream",
+                    f"{path.name}: /seo/ must be proxied to the backend",
+                )

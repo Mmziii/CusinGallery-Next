@@ -13,11 +13,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * it rewrites to, so the header/footer and the Persian text cannot silently
  * drop out of the first response again.
  */
-const { existsMock } = vi.hoisted(() => ({ existsMock: vi.fn() }));
+const { existsMock, infoExistsMock } = vi.hoisted(() => ({
+  existsMock: vi.fn(),
+  infoExistsMock: vi.fn(),
+}));
 
 vi.mock("../lib/catalog-availability", async (importOriginal) => {
   const actual = await importOriginal();
-  return { ...actual, catalogSlugExists: existsMock };
+  return {
+    ...actual,
+    catalogSlugExists: existsMock,
+    infoPageExists: infoExistsMock,
+  };
 });
 
 // The layout shell is a client tree; only the router primitives it reads are
@@ -54,7 +61,7 @@ describe("proxy: catalog slugs that Django says are gone", () => {
     const response = await proxy(requestFor("/products/unknown-product/"));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toBe("https://cusin.ir/not-found-page/");
+    expect(response.headers.get("x-middleware-rewrite")).toBe("https://cusin.ir/_not-found/");
     expect(response.headers.get("x-middleware-next")).toBeNull();
     expect(existsMock).toHaveBeenCalledWith("products", "unknown-product", expect.any(Object));
   });
@@ -65,7 +72,7 @@ describe("proxy: catalog slugs that Django says are gone", () => {
     const response = await proxy(requestFor("/brands/nope/"));
 
     expect(response.status).toBe(404);
-    expect(response.headers.get("x-middleware-rewrite")).toBe("https://cusin.ir/not-found-page/");
+    expect(response.headers.get("x-middleware-rewrite")).toBe("https://cusin.ir/_not-found/");
     expect(existsMock).toHaveBeenCalledWith("brands", "nope", expect.any(Object));
   });
 
@@ -129,10 +136,40 @@ describe("proxy: catalog slugs that Django says are gone", () => {
     expect(broken.headers.get("x-middleware-next")).toBe("1");
   });
 
-  it("runs on catalog and phase-3a/3b private/auth prefixes", () => {
+  it("rewrites an unpublished info page to /_not-found/ with status 404 and fails open on upstream error", async () => {
+    infoExistsMock.mockResolvedValueOnce(false);
+    const missing = await proxy(
+      requestFor("/terms/", {
+        host: "cusin.ir",
+        "x-forwarded-proto": "https",
+        "x-forwarded-for": "203.0.113.5",
+      })
+    );
+    expect(infoExistsMock).toHaveBeenCalledWith("terms", {
+      host: "cusin.ir",
+      proto: "https",
+      forwardedFor: "203.0.113.5",
+    });
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("x-middleware-rewrite")).toBe(
+      "https://cusin.ir/_not-found/"
+    );
+
+    infoExistsMock.mockResolvedValueOnce(null);
+    const outage = await proxy(requestFor("/about/", { host: "cusin.ir" }));
+    expect(outage.status).toBe(200);
+    expect(outage.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("runs on catalog, info, and phase-3a/3b private/auth prefixes", () => {
     expect(config.matcher).toEqual([
       "/products/:path*",
       "/brands/:path*",
+      "/about/:path*",
+      "/contact/:path*",
+      "/shipping-returns/:path*",
+      "/terms/:path*",
+      "/privacy/:path*",
       "/account/:path*",
       "/wishlist/:path*",
       "/checkout/:path*",

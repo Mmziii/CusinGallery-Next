@@ -2,7 +2,7 @@ import { SITE_NAME, SITE_ORIGIN } from "./site";
 import { shareImageUrl } from "../utils/shareImage";
 import { faDigits } from "../utils/faDigits";
 
-const DEFAULT_DESCRIPTION =
+export const DEFAULT_DESCRIPTION =
   "فروشگاه آنلاین ظروف آشپزخانه، پخت‌وپز، بلور و کریستال و لوازم خانه. ارسال به سراسر ایران، پرداخت امن اینترنتی.";
 
 const absolute = (path) => `${SITE_ORIGIN}${path.startsWith("/") ? "" : "/"}${path}`;
@@ -113,6 +113,22 @@ export function productMetadata({ product, slug, settings = {}, content = {} } =
     canonicalPath: `/products/${encodeURIComponent(slug)}/`,
     image,
     type: "product",
+    settings,
+    content,
+  });
+}
+
+export function infoPageMetadata({
+  page,
+  fallbackTitle,
+  path,
+  settings = {},
+  content = {},
+} = {}) {
+  return buildMetadata({
+    title: page?.seo_title || page?.title || fallbackTitle,
+    description: page?.seo_description,
+    canonicalPath: path,
     settings,
     content,
   });

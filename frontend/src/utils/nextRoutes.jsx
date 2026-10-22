@@ -1,43 +1,25 @@
 import PropTypes from "prop-types";
 import { useCallback } from "react";
-import {
-  Link as RouterLink,
-  NavLink as RouterNavLink,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 /**
- * The storefront is being migrated page by page to the Next app; only the
- * static info pages (/about/, /contact/, /shipping-returns/, /terms/,
- * /privacy/) and the unknown-path 404 still live on the SPA. This is the ONE
- * switchboard between them.
+ * Phase 4: every storefront route is now owned by the Next app, so the SPA
+ * serves no page any more. Mirrors `web/lib/navigation.jsx`: `isNextOwnedPath`
+ * is true for every storefront path and false only for Django/edge-owned paths
+ * (`/admin/`, `/api/`, `/payment/callback/`, `/media/`, `/static/`) and
+ * non-root-relative external URLs.
  *
- * Links into a Next-owned route must be a FULL DOCUMENT NAVIGATION (a plain
- * <a href>), not a react-router transition: react-router would render the
- * SPA's own old copy of that page -- this is how clicking the logo on an SPA
- * page used to land on the retired SPA home instead of the Next one. Links
- * into SPA-owned routes keep using react-router exactly as before.
- *
- * Drop-in replacements -- import { Link, NavLink, useNextNavigate } from here
- * instead of from "react-router-dom" anywhere a Next-owned URL can be
- * produced.
+ * Because neither Next-owned pages nor Django-owned endpoints live inside
+ * react-router, every link/navigation here performs a full document navigation
+ * (`<a href>` / `window.location`).
  */
 
-//: Route prefixes rendered by the Next app (phases 1-3b).
-const NEXT_OWNED_PREFIXES = [
-  "/shop",
-  "/products",
-  "/brands",
-  "/login",
-  "/register",
-  "/password-reset",
-  "/reset-password",
-  "/account",
-  "/wishlist",
-  "/cart",
-  "/checkout",
-  "/payment",
+export const DJANGO_OWNED_PREFIXES = [
+  "/admin",
+  "/api",
+  "/payment/callback",
+  "/media",
+  "/static",
 ];
 
 /** The href a `to` value resolves to (string or {pathname, search, hash}). */
@@ -47,13 +29,19 @@ export function nextHref(to) {
   return `${to.pathname || "/"}${to.search || ""}${to.hash || ""}`;
 }
 
-/** True when the Next app owns this URL (so it must be a document load). */
+export function isDjangoOwnedPath(to) {
+  const path = nextHref(to).split(/[?#]/)[0];
+  return DJANGO_OWNED_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
+  );
+}
+
+/** True when the Next app owns this URL (every storefront path; excludes Django paths). */
 export function isNextOwnedPath(to) {
   const path = nextHref(to).split(/[?#]/)[0];
   if (!path || path === "/") return true;
-  return NEXT_OWNED_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`)
-  );
+  if (!path.startsWith("/") || path.startsWith("//")) return false;
+  return !isDjangoOwnedPath(path);
 }
 
 /** react-router's own NavLink matching, minus the router transition. */
@@ -80,30 +68,16 @@ function nextAnchor({ href, isActive = false, className, children, ...props }) {
   );
 }
 
-/** <Link> that leaves the SPA for Next-owned URLs. */
-export function Link({ to, replace, className, children, ...props }) {
+/** <Link> that leaves the SPA via a document navigation. */
+export function Link({ to, replace: _replace, className, children, ...props }) {
   const href = nextHref(to);
-  if (!isNextOwnedPath(href)) {
-    return (
-      <RouterLink to={to} replace={replace} className={className} {...props}>
-        {children}
-      </RouterLink>
-    );
-  }
   return nextAnchor({ href, className, children, ...props });
 }
 
-/** <NavLink> that leaves the SPA for Next-owned URLs (active state kept). */
+/** <NavLink> that leaves the SPA via a document navigation (active state kept). */
 export function NavLink({ to, end = false, className, children, ...props }) {
   const { pathname } = useLocation();
   const href = nextHref(to);
-  if (!isNextOwnedPath(href)) {
-    return (
-      <RouterNavLink to={to} end={end} className={className} {...props}>
-        {children}
-      </RouterNavLink>
-    );
-  }
   return nextAnchor({
     href,
     isActive: isActiveHref(pathname, href, end),
@@ -113,14 +87,13 @@ export function NavLink({ to, end = false, className, children, ...props }) {
   });
 }
 
-/** useNavigate() that leaves the SPA for Next-owned URLs. */
+/** useNavigate() that leaves the SPA via window.location (numeric deltas stay on history). */
 export function useNextNavigate() {
   const navigate = useNavigate();
   return useCallback(
     (to, options = {}) => {
       if (typeof to === "number") return navigate(to);
       const href = nextHref(to);
-      if (!isNextOwnedPath(href)) return navigate(to, options);
       if (typeof window === "undefined") return undefined;
       if (options.replace) window.location.replace(href);
       else window.location.assign(href);

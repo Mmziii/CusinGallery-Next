@@ -142,5 +142,8 @@ it("SPA guard uses document navigation and URL-encoded path+query (no router sta
   expect(source).toContain("window.location.replace(target)");
   expect(source).not.toContain("<Navigate");
   const nextRoutes = readFileSync(new URL("../../frontend/src/utils/nextRoutes.jsx", import.meta.url), "utf8");
-  for (const prefix of ["/login", "/register", "/password-reset", "/reset-password", "/account", "/wishlist"]) expect(nextRoutes).toContain(`"${prefix}"`);
+  expect(nextRoutes).toContain("DJANGO_OWNED_PREFIXES");
+  for (const prefix of ["/admin", "/api", "/payment/callback", "/media", "/static"]) {
+    expect(nextRoutes).toContain(`"${prefix}"`);
+  }
 });
