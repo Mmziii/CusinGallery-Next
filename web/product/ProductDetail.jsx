@@ -240,9 +240,12 @@ function ProductDetail({ product, slug, reviews = {} }) {
               type="button"
               className="btn btn--primary"
               onClick={handleAdd}
+              aria-label={outOfStock ? "ناموجود" : hasVariants && !activeVariant ? "انتخاب گزینه‌ها" : "افزودن به سبد خرید"}
               disabled={outOfStock || (hasVariants && !activeVariant)}
             >
-              {outOfStock ? "ناموجود" : hasVariants && !activeVariant ? "انتخاب گزینه‌ها" : "افزودن به سبد خرید"}
+              {outOfStock ? "ناموجود" : hasVariants && !activeVariant ? "انتخاب گزینه‌ها" : (
+                <span>افزودن به سبد<span className="product-detail__buy-label-extra"> خرید</span></span>
+              )}
             </button>
 
             <button

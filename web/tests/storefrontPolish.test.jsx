@@ -235,12 +235,13 @@ describe("storefront polish: CSS cascade", () => {
       expect(valueOf(".product-detail__buy .btn--primary", width, "min-width")).toBe("0");
       expect(valueOf(".product-detail__buy .icon-btn--lg", width, "flex")).toBe("none");
 
-      // Layout check on 375px:
-      // Content width = 375 - 24 = 351px.
-      // Qty picker: 131px, add button min-width: 0, heart: 44px, 2 gaps @ 14px = 28px.
-      // Total minimum row requirement = 131 + 0 + 44 + 28 = 203px <= 351px, so row stays on one line.
-      const minRequired = 131 + 0 + 44 + 28;
-      expect(minRequired).toBeLessThanOrEqual(width - 24);
+      expect(valueOf(".product-detail__buy", width, "gap")).toBe("8px");
+      expect(valueOf(".product-detail__buy .btn--primary", width, "white-space")).toBe("nowrap");
+      expect(valueOf(".product-detail__buy .btn--primary", width, "height")).toBe("44px");
+      expect(valueOf(".product-detail__buy .qty-picker", width, "flex")).toBe("none");
+      expect(valueOf(".product-detail__buy .qty-picker button", width, "flex")).toBe("none");
+      expect(valueOf(".product-detail__buy .qty-picker button", width, "width")).toBe("44px");
+      expect(valueOf(".product-detail__buy .qty-picker button", width, "height")).toBe("44px");
     }
   });
 
@@ -323,6 +324,19 @@ describe("storefront polish: rendered markup", () => {
     expect(heart).not.toBe(-1);
     expect(add > buyRegion.indexOf('class="qty-picker"') && heart > add).toBe(true);
   });
+
+  it.each([320, 375, 414, 359, 360, 767, 768])(
+    "buy label at %ipx: only « خرید» is hidden below 360px; full accessible name is kept",
+    (width) => {
+      const html = renderToStaticMarkup(
+        <ProductDetail product={product} slug="copper-pot" reviews={{}} />
+      );
+      expect(html).toContain('aria-label="افزودن به سبد خرید"');
+      expect(html).toContain('<span>افزودن به سبد<span class="product-detail__buy-label-extra"> خرید</span></span>');
+      const display = computedStyle(declarations, html, ".product-detail__buy-label-extra", width, "display");
+      expect(display === "none").toBe(width < 360);
+    }
+  );
 
   it("14. back-in-stock form renders below the product-detail__buy row when out of stock", () => {
     const oosProduct = { ...product, stock_status: "out_of_stock" };
