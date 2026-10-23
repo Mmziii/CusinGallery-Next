@@ -81,7 +81,10 @@ keep their existing routes and source values.
     <div class="cusin-kpi-grid cusin-report-kpis">
       <article class="cusin-kpi cusin-report-kpi">
         <span class="cusin-kpi-label">درآمد</span>
-        <strong class="cusin-kpi-value">{{ report.summary.revenue|toman }}</strong>
+        <strong class="cusin-kpi-value cusin-kpi-money">
+          <span class="cusin-kpi-amount">{{ report.summary.revenue|numfa }}</span>
+          <span class="cusin-kpi-unit">تومان</span>
+        </strong>
         <span class="cusin-report-delta is-{{ report.summary.deltas.revenue.direction }}" title="تغییر نسبت به دورهٔ قبل">
           {% if report.summary.deltas.revenue.available %}
             {% if report.summary.deltas.revenue.direction == "up" %}▲ {{ report.summary.deltas.revenue.percent|numfa }}٪
@@ -116,7 +119,10 @@ keep their existing routes and source values.
 
       <article class="cusin-kpi cusin-report-kpi">
         <span class="cusin-kpi-label">میانگین سبد</span>
-        <strong class="cusin-kpi-value">{{ report.summary.aov|toman }}</strong>
+        <strong class="cusin-kpi-value cusin-kpi-money">
+          <span class="cusin-kpi-amount">{{ report.summary.aov|numfa }}</span>
+          <span class="cusin-kpi-unit">تومان</span>
+        </strong>
         <span class="cusin-report-delta is-{{ report.summary.deltas.aov.direction }}" title="تغییر نسبت به دورهٔ قبل">
           {% if report.summary.deltas.aov.available %}
             {% if report.summary.deltas.aov.direction == "up" %}▲ {{ report.summary.deltas.aov.percent|numfa }}٪

@@ -366,11 +366,15 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi {
   flex-direction: column;
   align-items: flex-start;
   gap: 5px;
+  width: 100%;
   min-width: 0;
   padding: 14px 15px;
   border: 1px solid var(--cusin-border);
   border-radius: var(--cusin-radius-sm);
   background: var(--cusin-surface);
+  /* Card width, not the viewport, sizes the money figure below. */
+  container-type: inline-size;
+  container-name: report-kpi;
 }
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-label {
   color: var(--cusin-muted);
@@ -385,6 +389,46 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+/* Money KPIs: the grouped number stays one unbreakable line; «تومان» is a
+   small muted unit on that same line. Vazirmatn tabular figures at weight
+   800 make a 10-digit amount («۱٬۲۳۴٬۵۶۷٬۸۹۰») 7.66em wide, so the clamp
+   spends the card's inline size minus the unit and still fits at 1366px
+   and in a 375px two-column tile. The vw clamp is only the fallback when
+   container-query units are unavailable. */
+body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-money {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  font-size: clamp(0.75rem, 2.5vw, 1.15rem);
+  font-size: clamp(0.75rem, calc((100cqi - 2.05rem) / 8), 1.5rem);
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-amount {
+  flex: 0 0 auto;
+  color: var(--cusin-text);
+  font-size: clamp(0.75rem, 2.5vw, 1.15rem);
+  font-size: clamp(0.75rem, calc((100cqi - 2.05rem) / 8), 1.5rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-unit {
+  flex: 0 0 auto;
+  color: var(--cusin-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-sub {
   color: var(--cusin-muted);
@@ -901,12 +945,36 @@ body.cusin-admin.cusin-reports #container .cusin-report-bar-value {
   body.cusin-admin.cusin-reports #container .cusin-report .cusin-card-head h2 {
     font-size: 0.9rem;
   }
-  body.cusin-admin.cusin-reports #container .cusin-report-kpis {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
-  body.cusin-admin.cusin-reports #container .cusin-report-kpi {
-    padding: 12px 13px;
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    column-gap: 6px;
+    row-gap: 4px;
+    padding: 10px 8px;
+  }
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-label,
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-value,
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-sub {
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  body.cusin-admin.cusin-reports #container .cusin-report-delta {
+    flex: 0 1 auto;
+    max-width: 100%;
+  }
+  body.cusin-admin.cusin-reports #container .cusin-report-sparkline {
+    flex: 0 0 auto;
+    width: min(88px, 42%);
+    height: 18px;
+    margin-top: 0;
+    margin-inline-start: auto;
+    align-self: center;
   }
   body.cusin-admin.cusin-reports #container .cusin-report-export {
     min-width: 44px;
@@ -937,6 +1005,16 @@ body.cusin-admin.cusin-reports #container .cusin-report-bar-value {
   }
   body.cusin-admin.cusin-reports #container .cusin-funnel-step {
     gap: 5px 8px;
+  }
+}
+
+/* Very narrow phones: two KPI columns no longer leave a readable figure. */
+@media (max-width: 359px) {
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi {
+    padding-inline: 12px;
   }
 }
 
