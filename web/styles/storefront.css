@@ -236,7 +236,7 @@ input:focus, textarea:focus, select:focus {
 .section__head h2 { margin: 0; font-size: var(--font-size-xl); }
 .section__head a { color: var(--color-primary); font-size: var(--font-size-sm); }
 
-.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); }
+.category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); }
 .category-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -922,8 +922,9 @@ input:focus, textarea:focus, select:focus {
   line-height: 1.9;
 }
 
-/* Footer: business info + e-namad badge slot. */
-.site-footer__contact { font-size: var(--font-size-sm); color: inherit; opacity: 0.85; }
+/* Footer: business info + e-namad badge slot. <address> is italic by UA
+   style -- Persian must never be italic. */
+.site-footer__contact { font-size: var(--font-size-sm); color: inherit; opacity: 0.85; font-style: normal; }
 .site-footer__enamad {
   min-height: 96px;
   border: 2px dashed currentColor;
@@ -1499,15 +1500,19 @@ h1, h2, h3, .section__head h2 {
 .trust-strip__item span { min-width: 0; }
 @media (max-width: 767px) {
   .trust-strip__inner {
-    display: flex; flex-wrap: nowrap; justify-content: flex-start; gap: 0;
-    overflow-x: auto; overscroll-behavior-inline: contain;
-    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    align-items: start; gap: var(--space-2);
+    overflow: hidden; overscroll-behavior: none;
+    scroll-snap-type: none;
   }
   .trust-strip__item {
-    flex: 0 0 100%; width: 100%; justify-content: flex-start;
-    scroll-snap-align: start; padding: 6px 12px;
+    width: auto; flex: none;
+    display: flex; align-items: center; justify-content: flex-start;
+    gap: var(--space-2); padding: 4px 8px; line-height: 1.7;
+    scroll-snap-align: none;
   }
+  /* Odd counts: the last tile takes the whole row. */
+  .trust-strip__item:last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 
 /* --- Sections --- */
@@ -1519,7 +1524,7 @@ h1, h2, h3, .section__head h2 {
 
 
 /* --- Category tiles --- */
-.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+.category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
 .category-card {
   position: relative; border-radius: var(--radius-lg); overflow: hidden;
   aspect-ratio: 1; background: var(--brand-green-tint);
@@ -1535,6 +1540,17 @@ h1, h2, h3, .section__head h2 {
   background: linear-gradient(to top, rgba(24,30,12,.92) 0%, rgba(24,30,12,.8) 72%, rgba(24,30,12,0) 100%);
   color: var(--brand-ivory); padding: 44px 8px 10px;
   font-weight: 700; font-size: var(--font-size-md);
+}
+@media (max-width: 767px) {
+  .category-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-3); }
+  .category-card { aspect-ratio: 1; }
+  /* Odd counts on phones: the last tile spans both columns, same height as
+     the other tiles (aspect-ratio 2 / 1 matches two square tiles minus one
+     gap at every phone width), label centred. */
+  .category-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+    aspect-ratio: 2 / 1;
+  }
 }
 
 /* --- Product cards --- */
@@ -1850,6 +1866,19 @@ h1, h2, h3, .section__head h2 {
 .site-footer__bottom { border-top: 1px solid rgba(206,180,100,.25); padding-block: var(--space-3); font-size: var(--font-size-sm); color: rgba(250,247,240,.75); }
 .site-footer__enamad { border-color: rgba(206,180,100,.5); }
 
+/* Phone footer (below 768px): the brand/contact block stays full width and
+   the two link columns sit side by side; tighter gaps between blocks. */
+@media (max-width: 767px) {
+  .site-footer__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-2);
+  }
+  .site-footer__grid > :nth-child(1) { grid-column: 1 / -1; }   /* brand + contact: full width */
+  .site-footer__grid > :nth-child(4) { grid-column: 1 / -1; }   /* e-namad: full width when shown */
+  .site-footer__grid h4 { margin-bottom: var(--space-1); }
+  .site-footer__contact p { margin: 0 0 var(--space-1); }
+}
+
 /* --- Toasts --- */
 .toaster { position: fixed; bottom: 18px; inset-inline: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 120; pointer-events: none; }
 .toast {
@@ -1883,9 +1912,11 @@ html.js-reveal .reveal.is-revealed, .reveal.is-revealed { opacity: 1; transform:
 .floating-contact__toggle { display: none; }
 @media (max-width: 767px) {
   .floating-contact { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); inset-inline-end: 14px; inset-inline-start: auto; gap: 8px; }
+  /* Phones: the back-to-top button overlaps the left product card's
+     add-to-cart button, so it stays hidden; the contact button is kept. */
+  .floating-contact .back-to-top { display: none; }
   .floating-contact a,
-  .floating-contact__toggle,
-  .floating-contact .back-to-top { width: 44px; height: 44px; }
+  .floating-contact__toggle { width: 44px; height: 44px; }
   .floating-contact__toggle { display: grid; place-items: center; border-radius: 50%; background: var(--brand-green-dark); color: var(--brand-gold); border: 1px solid rgba(206,180,100,.6); box-shadow: var(--shadow-md); }
   .floating-contact:not(.floating-contact--expanded) > a { display: none; }
   .floating-contact--expanded > a { display: grid; }
@@ -1927,7 +1958,10 @@ html.js-reveal .reveal.is-revealed, .reveal.is-revealed { opacity: 1; transform:
   padding: var(--space-2) var(--space-4); box-shadow: 0 -6px 22px rgba(30,36,18,.12);
 }
 @media (max-width: 768px) {
-  .product-detail__stickybar { display: flex; }
+  /* The sticky buy bar is hidden by default (SSR-safe); JS adds
+     .product-detail__stickybar--visible only when the main add-to-cart
+     button is out of view. Never shown on desktop. */
+  .product-detail__stickybar--visible { display: flex; }
   .product-detail { padding-bottom: 84px; }
 }
 
@@ -2168,6 +2202,15 @@ input.is-invalid, select.is-invalid, textarea.is-invalid { border-color: var(--c
 .breadcrumbs [aria-current="page"] { color: var(--brand-green-dark); font-weight: 700; }
 /* inside the PDP grid the trail spans both columns */
 .product-detail > .breadcrumbs { grid-column: 1 / -1; margin-top: 0; }
+
+@media (max-width: 767px) {
+  /* One line, no orphan «‹»: horizontal scroll without a visible scrollbar,
+     mounted scrolled to the current (last) item. */
+  .breadcrumbs { overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+  .breadcrumbs::-webkit-scrollbar { display: none; }
+  .breadcrumbs ol { flex-wrap: nowrap; }
+  .breadcrumbs li { flex-shrink: 0; }
+}
 
 /* --- Shop toolbar: result count (item 7) --- */
 .shop__count {
@@ -2928,6 +2971,7 @@ input, select, textarea { min-width: 0; max-width: 100%; }
     margin-top: 0;
     min-width: 0;
     gap: 4px;
+    flex-wrap: nowrap; /* price and «تومان» on one line */
   }
   .product-card__add-icon {
     flex: none;
@@ -3316,9 +3360,11 @@ input, select, textarea { min-width: 0; max-width: 100%; }
 .site-footer__social {
   list-style: none;
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   padding: 0;
   margin: var(--space-3) 0 0;
+  justify-content: flex-start; /* start side = right in RTL, beside the column text */
 }
 .site-footer__social a {
   display: inline-flex;
