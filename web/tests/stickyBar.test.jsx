@@ -86,35 +86,61 @@ it("sticky bar: hidden while the main add-to-cart button is visible, shown when 
   expect(bar.textContent).toContain("سبد خرید");
 });
 
-it("breadcrumbs: scrolls the <ol> to its end; RTL scrolls negative (-max), never the page", () => {
+it("breadcrumbs: scrolls the <nav> to its end; RTL scrolls negative (-max), never the page", () => {
   const items = [
     { label: "کازین گالری", to: "/" },
     { label: "قابلمه مسی" },
   ];
 
   for (const [dir, sign] of [["rtl", -1], ["ltr", 1]]) {
+    const origScrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollWidth");
+    const origClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "clientWidth");
+
+    Object.defineProperty(HTMLElement.prototype, "scrollWidth", {
+      configurable: true,
+      get() {
+        return this.tagName === "NAV" && this.classList.contains("breadcrumbs") ? 400 : 0;
+      },
+    });
+    Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+      configurable: true,
+      get() {
+        return this.tagName === "NAV" && this.classList.contains("breadcrumbs") ? 200 : 0;
+      },
+    });
+
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => ({
+      direction: dir,
+      overflowX: el.classList?.contains("breadcrumbs") && el.tagName === "NAV" ? "auto" : "visible",
+    }));
+
     act(() => {
       root = createRoot(container);
       root.render(<Breadcrumbs items={items} />);
     });
 
+    const nav = container.querySelector("nav.breadcrumbs");
     const ol = container.querySelector(".breadcrumbs ol");
+    expect(nav).not.toBeNull();
     expect(ol).not.toBeNull();
 
-    // Mock scroll geometry and direction on the rendered <ol>.
-    Object.defineProperty(ol, "scrollWidth", { value: 400, configurable: true });
-    Object.defineProperty(ol, "clientWidth", { value: 200, configurable: true });
-    vi.spyOn(window, "getComputedStyle").mockReturnValue({ direction: dir });
+    // The nav is the scroll container with overflow-x: auto; ol has overflow: visible.
+    const max = 400 - 200;
+    // The effect itself actually ran on mount and scrolled the nav.
+    expect(nav.scrollLeft).toBe(sign * max);
+    // Setting scrollLeft on ol is a no-op; ol was not targeted by the effect.
+    expect(ol.scrollLeft).toBe(0);
 
-    // Re-run the same scroll logic the effect uses (scrollWidth/clientWidth
-    // were 0 on first mount, so the effect itself did not scroll yet).
-    const max = ol.scrollWidth - ol.clientWidth;
-    ol.scrollLeft = getComputedStyle(ol).direction === "rtl" ? -max : max;
-
-    expect(ol.scrollLeft).toBe(sign * max);
-    expect(ol.scrollLeft).not.toBe(0);
+    // Page window was never scrolled.
+    expect(window.scrollX || 0).toBe(0);
+    expect(window.scrollY || 0).toBe(0);
 
     vi.restoreAllMocks();
+    if (origScrollWidth) Object.defineProperty(HTMLElement.prototype, "scrollWidth", origScrollWidth);
+    else delete HTMLElement.prototype.scrollWidth;
+    if (origClientWidth) Object.defineProperty(HTMLElement.prototype, "clientWidth", origClientWidth);
+    else delete HTMLElement.prototype.clientWidth;
+
     act(() => root.unmount());
     container.innerHTML = "";
     root = null;
