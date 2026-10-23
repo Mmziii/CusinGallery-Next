@@ -199,6 +199,57 @@ def _pct(part, whole) -> int:
     return round((float(part) / float(whole)) * 100)
 
 
+def _previous_range(range_: ReportRange) -> ReportRange:
+    """Return the immediately preceding window with the same number of days."""
+    end_date = range_.start_date - dt.timedelta(days=1)
+    start_date = end_date - dt.timedelta(days=range_.days - 1)
+    return ReportRange(
+        key="previous",
+        label="دورهٔ قبل",
+        start_date=start_date,
+        end_date=end_date,
+        start=_utc_midnight(start_date),
+        end=_utc_midnight(end_date + dt.timedelta(days=1)),
+        start_input=_jalali_input(start_date),
+        end_input=_jalali_input(end_date),
+    )
+
+
+def _delta(current, previous) -> dict:
+    """A percent change, or an unavailable (zero-baseline) comparison.
+
+    A zero previous value is not a meaningful percentage denominator. Keep
+    it distinct from an unchanged, non-zero metric so the UI can show an
+    em dash for the former and ``۰٪`` for the latter.
+    """
+    if not previous:
+        return {"available": False, "direction": "neutral", "percent": None}
+
+    difference = float(current or 0) - float(previous)
+    if difference == 0:
+        return {"available": True, "direction": "flat", "percent": 0}
+    return {
+        "available": True,
+        "direction": "up" if difference > 0 else "down",
+        "percent": round(abs(difference) / abs(float(previous)) * 100),
+    }
+
+
+def _sparkline(values, width=100, height=24) -> str:
+    """SVG polyline points for a tiny inline trend, or an empty string."""
+    if not values or max(values, default=0) <= 0:
+        return ""
+    count = len(values)
+    low = min(values)
+    span = max(values) - low
+    points = []
+    for index, value in enumerate(values):
+        x = 2 + (index / (count - 1) * (width - 4) if count > 1 else (width - 4) / 2)
+        y = height - 2 - ((value - low) / span * (height - 4) if span else (height - 4) / 2)
+        points.append(f"{x:.1f},{y:.1f}")
+    return " ".join(points)
+
+
 def _admin_url(name: str, pk) -> str:
     try:
         return reverse(name, args=[pk])
@@ -629,20 +680,24 @@ def _chart(range_: ReportRange) -> dict:
         })
         day += dt.timedelta(days=1)
 
-    step = 36 if len(points) <= 31 else max(12, round(1000 / len(points)))
-    bar_w = max(6, min(24, step - 12))
+    # A bounded viewBox keeps annual ranges readable without a fixed-width
+    # page. Its SVG lives inside the chart's own horizontally-scrollable
+    # viewport on narrow screens.
+    width = max(560, min(1024, len(points) * 28))
+    step = width / max(1, len(points))
+    bar_w = max(1, min(18, round(step * 0.62, 2)))
     rev_max = max((point["revenue"] for point in points), default=0)
     order_max = max((point["orders"] for point in points), default=0)
 
     for index, point in enumerate(points):
-        point["x"] = index * step + (step - bar_w) / 2
+        point["x"] = round(index * step + (step - bar_w) / 2, 2)
         point["bar_w"] = bar_w
-        height = round(point["revenue"] / rev_max * 120) if rev_max else 0
+        height = round(point["revenue"] / rev_max * 112) if rev_max else 0
         if height == 0 and point["revenue"]:
             height = 2
         point["rev_h"] = height
         point["rev_y"] = 140 - height
-        oheight = round(point["orders"] / order_max * 120) if order_max else 0
+        oheight = round(point["orders"] / order_max * 112) if order_max else 0
         if oheight == 0 and point["orders"]:
             oheight = 2
         point["ord_h"] = oheight
@@ -663,10 +718,13 @@ def _chart(range_: ReportRange) -> dict:
     return {
         "points": points,
         "ticks": ticks,
+        "gridlines": (28, 56, 84, 112, 140),
         "rev_max": rev_max,
         "order_max": order_max,
-        "width": max(320, len(points) * step),
+        "width": width,
         "bar_w": bar_w,
+        "sparkline_revenue": _sparkline([point["revenue"] for point in points]),
+        "sparkline_orders": _sparkline([point["orders"] for point in points]),
         "has_data": bool(rev_max or order_max),
     }
 
@@ -675,8 +733,14 @@ def _chart(range_: ReportRange) -> dict:
 # public entry point
 # ---------------------------------------------------------------------------
 
-def build_report(range_: ReportRange) -> dict:
-    return {
+def build_report(range_: ReportRange, *, include_previous: bool = True) -> dict:
+    """Build the report data for one range.
+
+    The page gets a same-length previous-period comparison for its KPI
+    deltas. File/print callers opt out: the additional context must never
+    change their established export columns or add unnecessary queries.
+    """
+    report = {
         "range": range_.as_dict(),
         "presets": [
             {"key": key, "label": label, "active": key == range_.key}
@@ -692,3 +756,22 @@ def build_report(range_: ReportRange) -> dict:
         "coupons": _coupons(range_),
         "chart": _chart(range_),
     }
+
+    if include_previous:
+        previous_range = _previous_range(range_)
+        previous_summary = _summary(previous_range)
+        current_summary = report["summary"]
+        comparison_fields = (
+            "revenue", "orders", "aov", "conversion",
+            "new_customers", "returning_customers",
+        )
+        current_summary["deltas"] = {
+            key: _delta(current_summary[key], previous_summary[key])
+            for key in comparison_fields
+        }
+        report["previous_period"] = {
+            "range": previous_range.as_dict(),
+            "summary": previous_summary,
+        }
+
+    return report
