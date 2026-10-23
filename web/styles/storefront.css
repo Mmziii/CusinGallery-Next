@@ -539,9 +539,16 @@ input:focus, textarea:focus, select:focus {
 .product-detail__short { color: var(--color-text-muted); }
 .product-detail__buy { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); flex-wrap: wrap; }
 @media (max-width: 767px) {
-  .product-detail__buy { flex-wrap: nowrap; }
-  .product-detail__buy .btn--primary { flex: 1 1 auto; min-width: 0; }
+  .product-detail__buy { flex-wrap: nowrap; gap: 8px; }
+  .product-detail__buy .btn--primary { flex: 1 1 auto; min-width: 0; height: 44px; white-space: nowrap; }
+  /* An inset border keeps the picker and its 44px hit areas 44px tall. */
+  .product-detail__buy .qty-picker { flex: none; border: 0; box-shadow: inset 0 0 0 1px var(--color-border); }
+  .product-detail__buy .qty-picker button { flex: none; width: 44px; height: 44px; }
   .product-detail__buy .icon-btn--lg { flex: none; width: 44px; }
+}
+
+@media (max-width: 359px) {
+  .product-detail__buy-label-extra { display: none; }
 }
 
 .breadcrumb { font-size: var(--font-size-sm); color: var(--color-text-muted); }

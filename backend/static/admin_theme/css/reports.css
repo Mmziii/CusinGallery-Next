@@ -357,7 +357,7 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-empty .cusin-icon
 /* Summary KPIs ------------------------------------------------------------ */
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi {
@@ -372,9 +372,6 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi {
   border: 1px solid var(--cusin-border);
   border-radius: var(--cusin-radius-sm);
   background: var(--cusin-surface);
-  /* Card width, not the viewport, sizes the money figure below. */
-  container-type: inline-size;
-  container-name: report-kpi;
 }
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-label {
   color: var(--cusin-muted);
@@ -390,12 +387,8 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
-/* Money KPIs: the grouped number stays one unbreakable line; «تومان» is a
-   small muted unit on that same line. Vazirmatn tabular figures at weight
-   800 make a 10-digit amount («۱٬۲۳۴٬۵۶۷٬۸۹۰») 7.66em wide, so the clamp
-   spends the card's inline size minus the unit and still fits at 1366px
-   and in a 375px two-column tile. The vw clamp is only the fallback when
-   container-query units are unavailable. */
+/* Money inherits the same large value size as counts and percentages.
+   Wider, three-column cards leave room for grouped 10-digit amounts. */
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-money {
   display: flex;
   align-items: baseline;
@@ -403,8 +396,6 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin
   gap: 4px;
   max-width: 100%;
   min-width: 0;
-  font-size: clamp(0.75rem, 2.5vw, 1.15rem);
-  font-size: clamp(0.75rem, calc((100cqi - 2.05rem) / 8), 1.5rem);
   line-height: 1.15;
   white-space: nowrap;
   overflow-wrap: normal;
@@ -413,8 +404,7 @@ body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin
 body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-amount {
   flex: 0 0 auto;
   color: var(--cusin-text);
-  font-size: clamp(0.75rem, 2.5vw, 1.15rem);
-  font-size: clamp(0.75rem, calc((100cqi - 2.05rem) / 8), 1.5rem);
+  font-size: inherit;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
@@ -963,6 +953,10 @@ body.cusin-admin.cusin-reports #container .cusin-report-bar-value {
     flex: 1 1 100%;
     max-width: 100%;
     min-width: 0;
+  }
+  /* One shared phone size, including money; the muted unit stays small. */
+  body.cusin-admin.cusin-reports #container .cusin-report .cusin-report-kpi .cusin-kpi-value {
+    font-size: clamp(0.875rem, 3.8vw, 1.125rem);
   }
   body.cusin-admin.cusin-reports #container .cusin-report-delta {
     flex: 0 1 auto;
