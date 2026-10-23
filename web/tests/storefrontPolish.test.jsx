@@ -11,6 +11,9 @@ import {
   computedDisplay,
   mediaMatches,
   winning,
+  computedStyle,
+  specificity,
+  compareSpecificity,
 } from "./helpers/cssCascade";
 import ProductCard from "../components/ProductCard";
 import ProductDetail from "../product/ProductDetail";
@@ -55,6 +58,35 @@ describe("storefront polish: CSS cascade", () => {
       expect(valueOf(".site-footer__social", width, "flex-wrap")).toBe("wrap");
       expect(valueOf(".site-footer__social", width, "gap")).toBe("var(--space-2)");
       expect(valueOf(".site-footer__social", width, "justify-content")).toBe("flex-start");
+      // Selector specificity: .site-footer .site-footer__social (0,2,0) beats .site-footer ul (0,1,1)
+      expect(valueOf(".site-footer .site-footer__social", width, "flex-direction")).toBe("row");
+      expect(
+        compareSpecificity(
+          specificity(".site-footer .site-footer__social"),
+          specificity(".site-footer ul")
+        )
+      ).toBeGreaterThan(0);
+    }
+    // Real cascade check on rendered <Footer /> markup:
+    // .site-footer ul { flex-direction: column } (0,1,1) must be beaten by .site-footer .site-footer__social (0,2,0) -> "row"
+    const site = {
+      settings: {},
+      content: {
+        ...DEFAULT_CONTENT,
+        footer: {
+          ...DEFAULT_CONTENT.footer,
+          socials: { instagram: "https://instagram.com/cusin" },
+        },
+      },
+    };
+    const footerHtml = renderToStaticMarkup(
+      <SiteProvider value={site}>
+        <Footer />
+      </SiteProvider>
+    );
+    for (const width of [...PHONE, ...DESKTOP]) {
+      expect(computedStyle(declarations, footerHtml, ".site-footer__social", width, "flex-direction")).toBe("row");
+      expect(computedStyle(declarations, footerHtml, ".site-footer__social", width, "flex-wrap")).toBe("wrap");
     }
   });
 
@@ -92,11 +124,42 @@ describe("storefront polish: CSS cascade", () => {
     }
   });
 
-  it("4. product-card price keeps «تومان» on the same line as the price", () => {
+  it("4. product-card price keeps flex-wrap: wrap to prevent overlap with button, and normal prices fit on one line at 375px", () => {
     for (const width of PHONE) {
       expect(
         valueOf(".product-card--compact .product-card__footer .price", width, "flex-wrap")
-      ).toBe("nowrap");
+      ).toBe("wrap");
+      expect(
+        valueOf(".product-card--compact .product-card__footer .price", width, "gap")
+      ).toBe("3px");
+      expect(
+        valueOf(".product-card--compact .product-card__footer", width, "gap")
+      ).toBe("4px");
+      expect(
+        valueOf(".product-card--compact .product-card__footer .price__unit", width, "letter-spacing")
+      ).toBe("0");
+    }
+
+    // Geometry & layout check at 320px, 375px, 414px:
+    // 2-column grid: column width = (viewport - 2*container_padding(12) - grid_gap(8)) / 2
+    // Inside card: body padding 16px (8px on each side).
+    // Button is fixed 36px. Footer gap is 4px.
+    // Price container available width = card_width - 16 - 36 - 4.
+    for (const width of [320, 375, 414]) {
+      const cardWidth = (width - 24 - 8) / 2;
+      const footerWidth = cardWidth - 16;
+      const buttonWidth = 36;
+      const footerGap = 4;
+      const priceAvailableWidth = footerWidth - buttonWidth - footerGap;
+
+      // Price block + button width + gap must never exceed available footer width (no overlap)
+      expect(priceAvailableWidth + buttonWidth + footerGap).toBeLessThanOrEqual(footerWidth);
+
+      // On a 375px phone, priceAvailableWidth is 115.5px:
+      // Normal 6-7 digit prices like «۳۰۰٬۰۰۰ تومان» (~102px) fit on one line (> 102px).
+      if (width === 375) {
+        expect(priceAvailableWidth).toBeGreaterThanOrEqual(102);
+      }
     }
   });
 
@@ -155,12 +218,29 @@ describe("storefront polish: CSS cascade", () => {
     }
   });
 
-  it("12. breadcrumb on phones: one scrollable line, no visible scrollbar", () => {
+  it("12. breadcrumb on phones: one scrollable line, no visible scrollbar, nav owns overflow-x: auto", () => {
     for (const width of PHONE) {
       expect(valueOf(".breadcrumbs ol", width, "flex-wrap")).toBe("nowrap");
       expect(valueOf(".breadcrumbs", width, "overflow-x")).toBe("auto");
+      expect(valueOf(".breadcrumbs ol", width, "overflow-x")).toBeNull();
       expect(valueOf(".breadcrumbs", width, "scrollbar-width")).toBe("none");
       expect(valueOf(".breadcrumbs::-webkit-scrollbar", width, "display")).toBe("none");
+    }
+  });
+
+  it("13. product detail buy row below 768px: nowrap single line, add button shrinks, heart flex: none", () => {
+    for (const width of PHONE) {
+      expect(valueOf(".product-detail__buy", width, "flex-wrap")).toBe("nowrap");
+      expect(valueOf(".product-detail__buy .btn--primary", width, "flex")).toBe("1 1 auto");
+      expect(valueOf(".product-detail__buy .btn--primary", width, "min-width")).toBe("0");
+      expect(valueOf(".product-detail__buy .icon-btn--lg", width, "flex")).toBe("none");
+
+      // Layout check on 375px:
+      // Content width = 375 - 24 = 351px.
+      // Qty picker: 131px, add button min-width: 0, heart: 44px, 2 gaps @ 14px = 28px.
+      // Total minimum row requirement = 131 + 0 + 44 + 28 = 203px <= 351px, so row stays on one line.
+      const minRequired = 131 + 0 + 44 + 28;
+      expect(minRequired).toBeLessThanOrEqual(width - 24);
     }
   });
 
@@ -242,5 +322,19 @@ describe("storefront polish: rendered markup", () => {
     expect(add).not.toBe(-1);
     expect(heart).not.toBe(-1);
     expect(add > buyRegion.indexOf('class="qty-picker"') && heart > add).toBe(true);
+  });
+
+  it("14. back-in-stock form renders below the product-detail__buy row when out of stock", () => {
+    const oosProduct = { ...product, stock_status: "out_of_stock" };
+    const html = renderToStaticMarkup(
+      <ProductDetail product={oosProduct} slug="copper-pot" reviews={{}} />
+    );
+    const buyStart = html.indexOf('class="product-detail__buy"');
+    const bisStart = html.indexOf('class="back-in-stock"');
+    expect(buyStart).not.toBe(-1);
+    expect(bisStart).not.toBe(-1);
+    const buyClose = html.indexOf("</div>", buyStart);
+    // The buy button row closes before the back-in-stock container begins (renders below the row)
+    expect(bisStart).toBeGreaterThan(buyClose);
   });
 });

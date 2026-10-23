@@ -538,6 +538,11 @@ input:focus, textarea:focus, select:focus {
 .product-detail__brand { color: var(--color-text-muted); font-size: var(--font-size-sm); }
 .product-detail__short { color: var(--color-text-muted); }
 .product-detail__buy { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); flex-wrap: wrap; }
+@media (max-width: 767px) {
+  .product-detail__buy { flex-wrap: nowrap; }
+  .product-detail__buy .btn--primary { flex: 1 1 auto; min-width: 0; }
+  .product-detail__buy .icon-btn--lg { flex: none; width: 44px; }
+}
 
 .breadcrumb { font-size: var(--font-size-sm); color: var(--color-text-muted); }
 .breadcrumb a:hover { color: var(--color-accent); }
@@ -2964,14 +2969,17 @@ input, select, textarea { min-width: 0; max-width: 100%; }
   .product-card--compact .product-card__footer {
     margin-top: auto;
     align-items: flex-end;
-    gap: 6px;
+    gap: 4px;
     flex-wrap: nowrap;
   }
   .product-card--compact .product-card__footer .price {
     margin-top: 0;
     min-width: 0;
-    gap: 4px;
-    flex-wrap: nowrap; /* price and «تومان» on one line */
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  .product-card--compact .product-card__footer .price__unit {
+    letter-spacing: 0;
   }
   .product-card__add-icon {
     flex: none;
@@ -3357,9 +3365,11 @@ input, select, textarea { min-width: 0; max-width: 100%; }
 .site-footer__tagline { color: var(--brand-gold); font-weight: 600; margin-bottom: var(--space-2); }
 .site-footer__contact p { margin: 0 0 var(--space-1); }
 .site-footer__contact a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
-.site-footer__social {
+.site-footer__social,
+.site-footer .site-footer__social {
   list-style: none;
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   gap: var(--space-2);
   padding: 0;

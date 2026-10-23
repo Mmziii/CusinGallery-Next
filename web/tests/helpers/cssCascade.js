@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { JSDOM } from "jsdom";
 
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -93,12 +94,17 @@ export function loadDeclarations(files = STYLE_IMPORTS) {
     .map((entry, order) => ({ ...entry, order }));
 }
 
-/** Specificity of a simple selector: [ids, classes/attrs/pseudo-classes, elements]. */
+/** Specificity of a selector: [ids, classes/attrs/pseudo-classes, elements/pseudo-elements]. */
 export function specificity(selector) {
-  const ids = (selector.match(/#[\w-]+/g) || []).length;
+  const pseudoElements = (selector.match(/::[\w-]+/g) || []).length;
+  const cleanSelector = selector.replace(/::[\w-]+/g, "");
+  const ids = (cleanSelector.match(/#[\w-]+/g) || []).length;
   const classes =
-    (selector.match(/\.[\w-]+/g) || []).length + (selector.match(/\[[^\]]+\]/g) || []).length;
-  const elements = (selector.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length;
+    (cleanSelector.match(/\.[\w-]+/g) || []).length +
+    (cleanSelector.match(/\[[^\]]+\]/g) || []).length +
+    (cleanSelector.match(/:[\w-]+(?:\([^)]*\))?/g) || []).length;
+  const elements =
+    (cleanSelector.match(/(^|[\s>+~])[a-zA-Z][\w-]*/g) || []).length + pseudoElements;
   return [ids, classes, elements];
 }
 
@@ -135,7 +141,7 @@ export function matchingDeclarations(declarations, selector, width, { prop = "di
   );
 }
 
-function compareSpecificity(left, right) {
+export function compareSpecificity(left, right) {
   for (let index = 0; index < 3; index += 1) {
     if (left[index] !== right[index]) return left[index] - right[index];
   }
@@ -146,13 +152,90 @@ function compareSpecificity(left, right) {
 export function winning(entries, selector) {
   let best = null;
   for (const entry of entries) {
-    const score = specificity(selector);
+    let score;
+    if (entry.specificity) {
+      score = entry.specificity;
+    } else if (entry.matchedSelector) {
+      score = specificity(entry.matchedSelector);
+    } else if (selector && entry.selectors && entry.selectors.includes(selector)) {
+      score = specificity(selector);
+    } else if (entry.selectors && entry.selectors.length > 0) {
+      score = entry.selectors.reduce(
+        (max, s) => {
+          const sc = specificity(s);
+          return compareSpecificity(sc, max) > 0 ? sc : max;
+        },
+        [0, 0, 0]
+      );
+    } else if (selector) {
+      score = specificity(selector);
+    } else {
+      score = [0, 0, 0];
+    }
     const comparison = best ? compareSpecificity(score, best.score) : 1;
     if (!best || comparison > 0 || (comparison === 0 && entry.order >= best.entry.order)) {
       best = { entry, score };
     }
   }
   return best ? best.entry : null;
+}
+
+/**
+ * Declarations matching a DOM element (checking element.matches for each selector) at `width`.
+ * Evaluates the selector specificity that matched this element.
+ */
+export function matchingDeclarationsForElement(declarations, element, width, { prop = null, phonesOnly = false } = {}) {
+  const matches = [];
+  for (const entry of declarations) {
+    if (prop && entry.prop !== prop) continue;
+    if (!mediaMatches(entry.media, width)) continue;
+    if (phonesOnly && entry.media.length === 0) continue;
+
+    let highestScore = null;
+    let matchedSelector = null;
+    for (const sel of entry.selectors) {
+      const domSel = sel.replace(/::[\w-]+/g, "");
+      try {
+        if (element.matches(domSel)) {
+          const score = specificity(sel);
+          if (!highestScore || compareSpecificity(score, highestScore) > 0) {
+            highestScore = score;
+            matchedSelector = sel;
+          }
+        }
+      } catch {
+        // ignore unsupported selector syntax in jsdom
+      }
+    }
+    if (matchedSelector) {
+      matches.push({ ...entry, matchedSelector, specificity: highestScore });
+    }
+  }
+  return matches;
+}
+
+/** Effective value of `prop` on `element` at `width` across imported stylesheets, respecting specificity and order. */
+export function computedForElement(declarations, element, width, prop) {
+  const matched = matchingDeclarationsForElement(declarations, element, width, { prop });
+  const winner = winning(matched);
+  return winner ? winner.value : null;
+}
+
+/**
+ * Computes effective property value for `selector` inside `root` (HTML string or DOM element).
+ */
+export function computedStyle(declarations, root, selector, width, prop) {
+  let element = null;
+  if (typeof root === "string") {
+    const doc = new JSDOM(root).window.document;
+    element = doc.querySelector(selector);
+  } else if (root?.querySelector) {
+    element = root.querySelector(selector) || (root.matches?.(selector) ? root : null);
+  } else {
+    element = root;
+  }
+  if (!element) return null;
+  return computedForElement(declarations, element, width, prop);
 }
 
 /** Effective `display` of `selector` at `width` across the imported files. */
