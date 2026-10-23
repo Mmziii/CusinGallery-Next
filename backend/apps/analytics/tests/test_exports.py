@@ -84,6 +84,29 @@ class ReportExportTests(TestCase):
                 self.assertEqual(self._export(section).status_code, 200)
                 self.assertEqual(self._export(section, "csv").status_code, 200)
 
+    def test_report_page_renders_both_export_links_for_every_section(self):
+        from apps.analytics.exports import SECTION_TITLES
+
+        response = self.client.get(reverse("admin_reports"))
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        export_url = reverse("admin_reports_export")
+        for section in SECTION_TITLES:
+            for fmt in ("xlsx", "csv"):
+                with self.subTest(section=section, format=fmt):
+                    self.assertIn(
+                        f'href="{export_url}?section={section}&amp;format={fmt}&amp;range=',
+                        html,
+                    )
+
+    def test_summary_export_columns_stay_unchanged_by_kpi_comparisons(self):
+        sheet = workbook(self._export("summary")).active
+        self.assertEqual([cell.value for cell in sheet[1]], ["شاخص", "مقدار"])
+        self.assertEqual(sheet.max_row, 10)  # original nine summary rows + header
+        labels = [sheet.cell(row=row, column=1).value for row in range(2, sheet.max_row + 1)]
+        self.assertNotIn("دورهٔ قبل", labels)
+        self.assertFalse(any("تغییر" in str(label) for label in labels))
+
     def test_exports_keep_the_original_product_name(self):
         """Display is Persian-digit; the download stays the source text."""
         product = make_product(name="سایز 28 کد 9915")

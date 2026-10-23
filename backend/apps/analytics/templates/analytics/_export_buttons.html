@@ -1,7 +1,14 @@
+{% load adminui_extras %}
 {% comment %}
-Per-section downloads. Expects: section, export_url, export_query.
-Both formats are real files generated on the server (openpyxl / CSV+BOM).
-{% endcomment %}<span class="cusin-report-actions">
-  <a class="cusin-report-export" href="{{ export_url }}?section={{ section }}&format=xlsx&{{ export_query }}">خروجی اکسل</a>
-  <a class="cusin-report-export" href="{{ export_url }}?section={{ section }}&format=csv&{{ export_query }}">خروجی CSV</a>
+Compact, accessible per-section XLSX / CSV downloads. Expects: section,
+export_url, export_query. Keep the existing routes and query parameters.
+{% endcomment %}<span class="cusin-report-actions" aria-label="دریافت فایل این بخش">
+  <a class="cusin-report-export" href="{{ export_url }}?section={{ section }}&amp;format=xlsx&amp;{{ export_query }}"
+     aria-label="خروجی اکسل" title="خروجی اکسل">
+    {% cusin_icon "grid" %}<span class="cusin-report-export-label">XLSX</span>
+  </a>
+  <a class="cusin-report-export" href="{{ export_url }}?section={{ section }}&amp;format=csv&amp;{{ export_query }}"
+     aria-label="خروجی CSV" title="خروجی CSV">
+    {% cusin_icon "list" %}<span class="cusin-report-export-label">CSV</span>
+  </a>
 </span>

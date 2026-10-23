@@ -4,6 +4,7 @@ Everything is anchored to a frozen "now" so the 30-day window is
 deterministic regardless of when the suite runs.
 """
 import datetime as dt
+from pathlib import Path
 
 from django.contrib.auth.models import Permission
 from django.db import connection
@@ -150,6 +151,48 @@ class ReportNumberTests(TestCase):
         self.assertEqual(summary["new_customers"], 1)
         self.assertEqual(summary["returning_customers"], 1)
 
+    def test_previous_period_deltas_use_an_equal_shifted_window(self):
+        previous_day = ago(days=50)
+        make_event(
+            Event.Type.PRODUCT_VIEW, session_key="previous-session-aaaa",
+            created_at=previous_day,
+        )
+        make_event(
+            Event.Type.ORDER_PAID, session_key="previous-session-aaaa",
+            created_at=previous_day,
+        )
+
+        report = build_report(self.range)
+        previous = report["previous_period"]
+        deltas = report["summary"]["deltas"]
+
+        self.assertEqual(previous["range"]["days"], self.range.days)
+        self.assertEqual(
+            previous["range"]["end_date"],
+            self.range.start_date - dt.timedelta(days=1),
+        )
+        self.assertEqual(
+            previous["range"]["start_date"],
+            self.range.start_date - dt.timedelta(days=self.range.days),
+        )
+        self.assertEqual(previous["summary"]["revenue"], 100000)
+        self.assertEqual(previous["summary"]["orders"], 1)
+        self.assertEqual(previous["summary"]["conversion"], 100)
+        self.assertEqual(deltas["revenue"], {
+            "available": True, "direction": "up", "percent": 200,
+        })
+        self.assertEqual(deltas["orders"], {
+            "available": True, "direction": "up", "percent": 200,
+        })
+        self.assertEqual(deltas["aov"]["percent"], 50)
+        self.assertEqual(deltas["conversion"], {
+            "available": True, "direction": "down", "percent": 50,
+        })
+        self.assertEqual(deltas["new_customers"]["direction"], "flat")
+        self.assertEqual(deltas["new_customers"]["percent"], 0)
+        # No previous-period returning customers means no valid denominator.
+        self.assertFalse(deltas["returning_customers"]["available"])
+
     def test_funnel_counts_sessions_and_drop_off(self):
         funnel = {row["key"]: row for row in build_report(self.range)["funnel"]}
         self.assertEqual(funnel[Event.Type.PRODUCT_VIEW]["count"], 2)
@@ -293,6 +336,45 @@ class ReportNumberTests(TestCase):
         )
 
 
+class PreviousPeriodDeltaEdgeTests(TestCase):
+    def setUp(self):
+        self.range = range_30()
+
+    def test_an_empty_previous_period_renders_unavailable_deltas(self):
+        report = build_report(self.range)
+        self.assertEqual(report["previous_period"]["summary"]["orders"], 0)
+        self.assertEqual(report["previous_period"]["summary"]["revenue"], 0)
+        self.assertTrue(all(
+            not delta["available"]
+            for delta in report["summary"]["deltas"].values()
+        ))
+
+    def test_zero_previous_value_avoids_division_by_zero(self):
+        product = make_product(name="فنجان ساده")
+        customer = make_customer(phone="+989171999001")
+        make_order(
+            customer, product, created_at=ago(days=40), total=200000,
+            payment_status=Order.PaymentStatus.UNPAID,
+        )
+        make_order(
+            customer, product, created_at=ago(days=1), total=100000,
+        )
+
+        report = build_report(self.range)
+        previous = report["previous_period"]["summary"]
+        deltas = report["summary"]["deltas"]
+
+        # There was a prior order, but no paid revenue or basket average.
+        self.assertEqual(previous["orders"], 1)
+        self.assertEqual(previous["revenue"], 0)
+        self.assertEqual(previous["aov"], 0)
+        self.assertFalse(deltas["revenue"]["available"])
+        self.assertFalse(deltas["aov"]["available"])
+        self.assertEqual(deltas["orders"], {
+            "available": True, "direction": "flat", "percent": 0,
+        })
+
+
 @override_settings(**PLAIN_STATIC)
 class ReportPagePermissionTests(TestCase):
     def setUp(self):
@@ -420,3 +502,47 @@ class ReportPagePermissionTests(TestCase):
         html = self.client.get(self.url).content.decode()
         for _key, label in PRESETS:
             self.assertIn(label, html)
+
+    def test_custom_date_inputs_appear_only_for_the_custom_range(self):
+        owner = make_superuser(username="rep-custom-picker", phone="+989171200010")
+        self.client.force_login(owner)
+
+        preset_html = self.client.get(self.url, {"range": "30"}).content.decode()
+        self.assertNotIn('name="start"', preset_html)
+        self.assertNotIn('name="end"', preset_html)
+
+        custom_html = self.client.get(self.url, {"range": "custom"}).content.decode()
+        self.assertIn('name="start"', custom_html)
+        self.assertIn('name="end"', custom_html)
+
+    def test_section_navigation_uses_plain_anchor_links(self):
+        owner = make_superuser(username="rep-anchors", phone="+989171200011")
+        self.client.force_login(owner)
+        html = self.client.get(self.url).content.decode()
+        for anchor in ("summary", "sales", "products", "customers", "searches", "coupons"):
+            with self.subTest(anchor=anchor):
+                self.assertIn(f'href="#{anchor}"', html)
+                self.assertIn(f'id="{anchor}"', html)
+        self.assertIn("data-report-tabs", html)
+        self.assertIn("IntersectionObserver", (
+            Path(__file__).resolve().parents[3] / "static/admin_theme/js/reports.js"
+        ).read_text(encoding="utf-8"))
+
+    def test_mobile_report_layout_confines_wide_content_to_its_own_scrollers(self):
+        owner = make_superuser(username="rep-mobile", phone="+989171200012")
+        self.client.force_login(owner)
+        customer = make_customer(phone="+989171200013")
+        product = make_product(name="گلدان")
+        make_order(customer, product)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        self.assertIn("cusin-chart-scroll", html)
+        self.assertIn("cusin-table-scroll", html)
+        css = (
+            Path(__file__).resolve().parents[3] / "static/admin_theme/css/reports.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("@media (max-width: 767px)", css)
+        self.assertIn("overflow-x: auto", css)
+        self.assertNotIn("min-width: 46rem", css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr)", css)

@@ -112,6 +112,7 @@ def reports_view(request):
         "reports_url": reverse("admin_reports"),
         "export_url": reverse("admin_reports_export"),
         "print_url": reverse("admin_reports_print"),
+        "show_custom": (request.GET.get("range") or "").strip().lower() == "custom",
         "title": "گزارش‌ها و تحلیل",
     })
 
@@ -129,7 +130,7 @@ def reports_export(request):
         raise Http404("قالب خروجی ناشناخته است.")
 
     range_ = resolve_range(request.GET)
-    report = build_report(range_)
+    report = build_report(range_, include_previous=False)
     table = section_table(report, section)
     stem = file_stem(f"analytics-{section}", report["range"])
 
@@ -160,7 +161,7 @@ def _print_cell(value) -> str:
 @reports_access_required
 def reports_print(request):
     range_ = resolve_range(request.GET)
-    report = build_report(range_)
+    report = build_report(range_, include_previous=False)
     tables = []
     for key, title in SECTION_TITLES.items():
         if not can_view_section(request.user, key):
