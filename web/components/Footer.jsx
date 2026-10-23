@@ -6,6 +6,7 @@ import { SOCIAL_CHANNELS } from "../content/defaults";
 import useSiteContent from "../hooks/useSiteContent";
 import useSiteSettings from "../hooks/useSiteSettings";
 import { faDigits, hoursRange, latinDigits } from "../utils/faDigits";
+import { jalaliYear } from "../utils/jalali";
 
 /**
  * Site footer (Task 3): every value now comes from the owner-editable
@@ -29,9 +30,10 @@ function Footer() {
   const workingHours = footer.working_hours || "";
   const socials = footer.socials || {};
   const socialLinks = SOCIAL_CHANNELS.filter(({ key }) => Boolean(socials[key]));
+  const year = faDigits(jalaliYear());
   const copyright =
-    footer.copyright_text?.replace("{year}", String(new Date().getFullYear())) ||
-    `© ${new Date().getFullYear()} ${brand.name || "کازین گالری"}`;
+    footer.copyright_text?.replace("{year}", year) ||
+    `© ${year} ${brand.name || "کازین گالری"}`;
 
   return (
     <footer className="site-footer">
@@ -111,9 +113,9 @@ function Footer() {
             )}
           </ul>
         </div>
-        <div>
-          <h4>{footer.trust_title || "نمادها و مجوزها"}</h4>
-          {footer.enamad_html ? (
+        {footer.enamad_html ? (
+          <div>
+            <h4>{footer.trust_title || "نمادها و مجوزها"}</h4>
             <div
               className="site-footer__enamad-embed"
               // Sanitised with an explicit allowlist in apps/core/sanitize.py
@@ -121,12 +123,8 @@ function Footer() {
               // eslint-disable-next-line react/no-danger
               dangerouslySetInnerHTML={{ __html: footer.enamad_html }}
             />
-          ) : (
-            <div className="site-footer__enamad" aria-label="محل نماد اعتماد الکترونیکی">
-              <span>محل نماد اعتماد الکترونیکی (e-namad)</span>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : null}
       </div>
       <div className="site-footer__bottom">
         <div className="container">{copyright}</div>

@@ -1,6 +1,6 @@
 "use client";
 import PropTypes from "prop-types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "../lib/navigation";
 
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -68,6 +68,25 @@ function ProductDetail({ product, slug, reviews = {} }) {
   const [wishlistBusy, setWishlistBusy] = useState(false);
   const [bisPhone, setBisPhone] = useState("");
   const [bisState, setBisState] = useState(null); // null | busy | done | error
+  const buyRef = useRef(null);
+  // SSR default: hidden, so nothing jumps before hydration. The bar is shown
+  // only below 768px (CSS) and only while the main add-to-cart button is out
+  // of view (IntersectionObserver toggles this flag after hydration).
+  const [stickyVisible, setStickyVisible] = useState(false);
+
+  useEffect(() => {
+    const button = buyRef.current;
+    if (!button) return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry) setStickyVisible(!entry.isIntersecting);
+      },
+      { threshold: 0 }
+    );
+    observer.observe(button);
+    return () => observer.disconnect();
+  }, []);
 
   const images = product?.images || [];
 
@@ -217,6 +236,7 @@ function ProductDetail({ product, slug, reviews = {} }) {
             </div>
 
             <button
+              ref={buyRef}
               type="button"
               className="btn btn--primary"
               onClick={handleAdd}
@@ -224,6 +244,19 @@ function ProductDetail({ product, slug, reviews = {} }) {
             >
               {outOfStock ? "ناموجود" : hasVariants && !activeVariant ? "انتخاب گزینه‌ها" : "افزودن به سبد خرید"}
             </button>
+
+            <button
+              type="button"
+              className={`icon-btn icon-btn--lg ${wishlisted ? "icon-btn--active" : ""}`}
+              onClick={handleWishlist}
+              aria-pressed={wishlisted}
+              disabled={!isAuthenticated || wishlistBusy}
+              title={wishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+              aria-label={wishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+            >
+              <Icon name="heart" filled={wishlisted} size={20} />
+            </button>
+
             {outOfStock ? (
               <div className="back-in-stock">
                 <p className="muted">این کالا فعلاً موجود نیست. شمارهٔ موبایل‌تان را بگذارید تا وقتی موجود شد خبرتان کنیم.</p>
@@ -262,18 +295,6 @@ function ProductDetail({ product, slug, reviews = {} }) {
                 ) : null}
               </div>
             ) : null}
-
-            <button
-              type="button"
-              className={`icon-btn icon-btn--lg ${wishlisted ? "icon-btn--active" : ""}`}
-              onClick={handleWishlist}
-              aria-pressed={wishlisted}
-              disabled={!isAuthenticated || wishlistBusy}
-              title={wishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
-              aria-label={wishlisted ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
-            >
-              <Icon name="heart" filled={wishlisted} size={20} />
-            </button>
           </div>
 
           {added && added.error ? <Alert>{errorMessage(added.error)}</Alert> : null}
@@ -323,7 +344,9 @@ function ProductDetail({ product, slug, reviews = {} }) {
       {/* Part R5 item 10: browser-local, the server knows nothing about it */}
       <RecentlyViewed excludeId={product.id} />
 
-      <div className="product-detail__stickybar">
+      <div
+        className={`product-detail__stickybar${stickyVisible ? " product-detail__stickybar--visible" : ""}`}
+      >
         <PriceTag priceInfo={displayPrice} size="md" />
         <button
           type="button"

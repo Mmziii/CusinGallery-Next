@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link } from "../lib/navigation";
 import PropTypes from "prop-types";
 
@@ -7,10 +8,33 @@ import PropTypes from "prop-types";
  * aria-current="page". Server-rendered: it only imports the link shim.
  */
 export default function Breadcrumbs({ items }) {
+  const olRef = useRef(null);
+
+  // Phones scroll the trail horizontally. Bring the current (last) item into
+  // view inside the <ol> only -- scrollLeft on the <ol>, never the page.
+  // RTL-aware: offsetLeft/offsetWidth respect the inherited direction, so the
+  // same math lands the current item at the trailing edge in both LTR and RTL.
+  useEffect(() => {
+    const ol = olRef.current;
+    if (!ol) return undefined;
+    const last = ol.lastElementChild;
+    if (!last) return undefined;
+    // Scroll the <ol> to its end so the current (last) item is visible --
+    // inside the <ol> only, never the page. In RTL a scroller starts at
+    // scrollLeft 0 and goes negative towards the left; the current item sits
+    // at the left end, so scroll to -max instead of +max.
+    const max = ol.scrollWidth - ol.clientWidth;
+    if (max > 0) {
+      ol.scrollLeft =
+        getComputedStyle(ol).direction === "rtl" ? -max : max;
+    }
+    return undefined;
+  }, []);
+
   if (!items || items.length === 0) return null;
   return (
     <nav className="breadcrumbs" aria-label="مسیر صفحه">
-      <ol>
+      <ol ref={olRef}>
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
           return (
