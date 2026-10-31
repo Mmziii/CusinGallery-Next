@@ -209,6 +209,21 @@ describe("storefront polish: CSS cascade", () => {
     }
   });
 
+  it("10b. phone featured brands: two-up wrap, an odd last tile keeps its size and is centred", () => {
+    for (const width of PHONE) {
+      expect(valueOf(".brand-tiles", width, "display")).toBe("flex");
+      expect(valueOf(".brand-tiles", width, "flex-wrap")).toBe("wrap");
+      expect(valueOf(".brand-tiles", width, "justify-content")).toBe("center");
+      expect(valueOf(".brand-tile", width, "flex")).toBe("0 0 calc((100% - 10px) / 2)");
+      // No rule may stretch the leftover tile across the row.
+      expect(valueOf(".brand-tile:last-child:nth-child(odd)", width, "grid-column")).toBeNull();
+      expect(valueOf(".brand-tile:last-child:nth-child(odd)", width, "flex")).toBeNull();
+    }
+    for (const width of DESKTOP) {
+      expect(valueOf(".brand-tiles", width, "display")).toBe("grid");
+    }
+  });
+
   it("12. breadcrumb on phones: one scrollable line, no visible scrollbar, nav owns overflow-x: auto", () => {
     for (const width of PHONE) {
       expect(valueOf(".breadcrumbs ol", width, "flex-wrap")).toBe("nowrap");

@@ -3548,14 +3548,53 @@ body.login #header.cusin-topbar-wrap { background: transparent; border: 0; box-s
 body.login .cusin-topbar { justify-content: center; padding-top: 24px; }
 body.login .cusin-brand a,
 body.login .cusin-brand-mark { color: var(--cusin-text); }
-body.login #content-main {
-  max-width: 440px;
-  margin: 0 auto;
-  padding: 26px;
+/* ONE centred card: stock login.css already makes #container the login
+   column, so the column itself is the card (brand header + form). The
+   form box inside is NOT a second card: earlier it carried its own
+   padding and border with stock `width: 100%` in content-box sizing (and
+   the stock float), so it came out wider than the column and was pushed
+   sideways out of it in RTL. */
+body.login #container {
+  box-sizing: border-box;
+  width: min(440px, 100%);
+  min-width: 0;
+  min-height: 0;
+  margin: 72px auto;
+  overflow: hidden;
   border: 1px solid var(--cusin-border);
   border-radius: var(--cusin-radius);
   background: #ffffff;
   box-shadow: var(--cusin-shadow);
+}
+body.login .main,
+body.login #main { display: block; }
+body.login #header.cusin-topbar-wrap { position: static; border-bottom: 1px solid var(--cusin-border); }
+body.login .cusin-topbar { padding: 20px 26px 16px; min-height: 0; }
+body.login #content { padding: 22px 26px 26px; }
+body.login #content-main {
+  box-sizing: border-box;
+  float: none;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* The panel-wide `body.cusin-admin #container .content` gutter and
+   `.submit-row` padding outrank the rules above; on the login card they
+   added a 16px inset, 40px of dead space under the button and a button
+   24px narrower than the fields. */
+body.cusin-admin.login #container .content { padding: 0; }
+body.cusin-admin.login #container .submit-row { padding: 8px 0 0; }
+body.cusin-admin.login #container .form-row { padding: 0 0 14px; margin: 0; border: 0; }
+body.login #content br.clear { display: none; }
+@media (max-width: 767px) {
+  body.login #container { margin: 32px auto; }
+  body.login .cusin-topbar { padding: 16px 18px 12px; }
+  body.login #content { padding: 18px; }
 }
 body.login .form-row { display: block; }
 body.login .form-row label { display: block; padding: 0 0 6px; }

@@ -202,7 +202,7 @@ body.login {
     radial-gradient(90% 70% at 50% 0%, rgba(99, 112, 55, 0.16) 0%, rgba(246, 244, 238, 0) 70%),
     var(--cusin-bg);
 }
-body.login #content-main {
+body.login #container {
   border-top: 3px solid var(--cg-gold);
   box-shadow: 0 24px 48px -28px rgba(47, 58, 24, 0.4);
 }

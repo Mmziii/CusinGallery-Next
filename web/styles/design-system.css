@@ -449,11 +449,12 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--brand-green); 
 .brand-tile__media .img-placeholder__mark { opacity: .22; }
 .brand-tile__name { border-top: 1px solid var(--ds-line); }
 @media (max-width: 767px) {
-  .brand-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  /* Two-up, wrapped like the category shelf: an odd last tile keeps the
+     same size and is centred under the row, never stretched full width. */
+  .brand-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+  .brand-tile { flex: 0 0 calc((100% - 10px) / 2); min-width: 0; }
   .brand-tile__media { aspect-ratio: 4 / 3; }
   .brand-tile__name { padding: 10px 8px; font-size: 13px; }
-  .brand-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
-  .brand-tile:last-child:nth-child(odd) .brand-tile__media { aspect-ratio: 8 / 3; }
 }
 
 /* ===================================================== Review highlights */
