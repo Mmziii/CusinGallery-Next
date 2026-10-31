@@ -16,7 +16,7 @@ from django.http import FileResponse, HttpResponse, HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
-from django.utils.text import slugify
+from django.utils.text import capfirst, slugify
 
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -240,7 +240,10 @@ class ProductImageInline(admin.TabularInline):
     # Part S5 item 3: `ordering` is the gallery position -- the storefront
     # orders images by (primary first, then ordering) everywhere.
     verbose_name = "تصویر"
-    verbose_name_plural = "تصاویر (ترتیب نمایش با ستون «ترتیب» تعیین می‌شود؛ عدد کوچک‌تر = جلوتر)"
+    # The heading doubles as the section-bar tab label (product_form.js),
+    # so it stays one word; the ordering rule is the hint paragraph inside
+    # the images section (productimage_gallery_inline.html).
+    verbose_name_plural = "تصاویر"
 
     def thumbnail_preview(self, obj):
         # Part S4 item 1: the shared placeholder (brand mark on the warm-grey
@@ -547,6 +550,10 @@ class ProductAdmin(
         if db_field.name == "category":
             kwargs.setdefault("queryset", leaf_categories_queryset())
             kwargs.setdefault("help_text", LEAF_CATEGORY_HELP)
+            # Built by hand, so Django's default label (the model field's
+            # verbose_name «دسته‌بندی») must be passed on explicitly; without
+            # it the form fell back to the English attribute name «Category».
+            kwargs.setdefault("label", capfirst(db_field.verbose_name))
             return LeafCategoryChoiceField(**kwargs)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 

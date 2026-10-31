@@ -5094,3 +5094,104 @@ body.cusin-admin #content .cusin-file-picker .cusin-file-picker__input,
   border-radius: var(--cusin-radius-sm);
 }
 .cusin-file-picker__thumb[hidden] { display: none; }
+
+/* --------------------------------------------------------------------------
+   Review follow-up (redesign/ui-ux)
+   -------------------------------------------------------------------------- */
+
+/* Product changelist header row: title on the start side, the stock
+   object-tools (add button) on the end side of the same row. */
+.cusin-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 0 0 12px;
+}
+.cusin-page-head h1 { min-width: 0; }
+/* Same title size as `#content > h1`; the id is needed to outrank the
+   panel-wide `body.cusin-admin #container *` font-size floor. */
+body.cusin-admin #container .cusin-page-head > h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+.cusin-page-head .object-tools { margin: 0; }
+.cusin-page-head .object-tools li { margin-inline-start: 0; }
+
+/* «ابزارهای اکسل»: one compact disclosure, closed by default. The panel
+   inside keeps every rule of `.cusin-excel-actions` above. */
+.cusin-excel-tools { margin: 0 0 14px; }
+.cusin-excel-tools__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--cusin-border-strong);
+  border-radius: 999px;
+  background: var(--cusin-surface);
+  color: var(--cusin-text);
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.cusin-excel-tools__summary::-webkit-details-marker { display: none; }
+/* chevron: points down when closed, up when open */
+.cusin-excel-tools__summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  /* physical sides on purpose: a logical side flips in RTL and the
+     chevron would point sideways instead of down */
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 160ms var(--cusin-ease);
+}
+.cusin-excel-tools[open] > .cusin-excel-tools__summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.cusin-excel-tools__summary:hover { border-color: var(--cg-olive); }
+.cusin-excel-tools[open] > .cusin-excel-actions { margin-top: 10px; }
+
+/* Dashboard on phones: the range switch is ONE single-line segmented
+   control (it scrolls sideways if the labels ever outgrow the screen)
+   instead of pills that shrank into two-line circles, and KPI tiles sit
+   two per row. */
+@media (max-width: 767px) {
+  body.cusin-admin #container .cusin-kpis-head .cusin-days-toggle {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    gap: 2px;
+    padding: 3px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    border: 1px solid var(--cusin-border-strong);
+    border-radius: var(--cusin-radius-sm);
+    background: var(--cusin-surface);
+  }
+  body.cusin-admin #container .cusin-kpis-head .cusin-days-toggle::-webkit-scrollbar { display: none; }
+  body.cusin-admin #container .cusin-kpis-head .cusin-chip {
+    flex: 1 0 auto;
+    justify-content: center;
+    min-height: 40px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: calc(var(--cusin-radius-sm) - 3px);
+    white-space: nowrap;
+  }
+  body.cusin-admin #container .cusin-kpis-head .cusin-chip:not(.is-active) { background: transparent; }
+  body.cusin-admin #container .cusin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  body.cusin-admin #container .cusin-kpi { padding: 8px 10px; min-width: 0; }
+  body.cusin-admin #container .cusin-kpi-value,
+  body.cusin-admin #container .cusin-kpi strong { font-size: 1rem; overflow-wrap: anywhere; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cusin-excel-tools__summary::after { transition: none; }
+}
