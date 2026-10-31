@@ -1,53 +1,72 @@
 {% extends "admin/change_list.html" %}
-{% load i18n %}
+{% load i18n admin_list %}
 
 {% comment %}
 Part S5 item 8: the three daily Excel actions, right at the top of the
 product list, each with its own downloadable template so the owner never
 has to guess the column names.
+
+Review follow-up: the page header row carries the title AND the add
+button; the Excel tools fold into one «ابزارهای اکسل» disclosure (closed by
+default) so the list starts right under the header. The add button is the
+stock object-tools list rendered by Django's own change_list_object_tools
+tag (same permission check, same markup), moved here from the
+object-tools block below, which is emptied so it renders exactly once.
+Every Excel link, template link and hint inside the disclosure is
+unchanged.
 {% endcomment %}
 {% block content_title %}
-  {{ block.super }}
-  <div class="cusin-excel-actions" dir="rtl">
-    <div class="cusin-excel-actions__item">
-      <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_import' %}?mode=full">
-        ورود محصولات از اکسل
-      </a>
-      <span class="cusin-excel-actions__templates">
-        قالب:
-        <a href="{% url 'admin:products_product_import_template' %}?format=xlsx">Excel</a>
-        |
-        <a href="{% url 'admin:products_product_import_template' %}">CSV</a>
-      </span>
-    </div>
-    <div class="cusin-excel-actions__item">
-      <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_import' %}?mode=update">
-        به‌روزرسانی قیمت و موجودی
-      </a>
-      <span class="cusin-excel-actions__templates">
-        قالب:
-        <a href="{% url 'admin:products_product_update_template' %}?format=xlsx">Excel</a>
-        |
-        <a href="{% url 'admin:products_product_update_template' %}">CSV</a>
-      </span>
-    </div>
-    <div class="cusin-excel-actions__item">
-      <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_export' %}?format=xlsx">
-        خروجی اکسل
-      </a>
-      <span class="cusin-excel-actions__templates">
-        <a href="{% url 'admin:products_product_export' %}">خروجی CSV</a>
-      </span>
-    </div>
-    <div class="cusin-excel-actions__item">
-      <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_image_import' %}">
-        ورود گروهی تصاویر (فایل زیپ)
-      </a>
-      <span class="cusin-excel-actions__templates">
-        نام فایل = کد کالا؛ مثل <code dir="ltr">SOOLE-001.jpg</code> و
-        <code dir="ltr">SOOLE-001-2.jpg</code> — توضیح کامل:
-        <a href="{% url 'admin:products_product_image_import' %}#cusin-image-import-help">راهنمای نام‌گذاری</a>
-      </span>
-    </div>
+  <div class="cusin-page-head">
+    {{ block.super }}
+    <ul class="object-tools">
+      {% change_list_object_tools %}
+    </ul>
   </div>
+  <details class="cusin-excel-tools">
+    <summary class="cusin-excel-tools__summary">ابزارهای اکسل</summary>
+    <div class="cusin-excel-actions" dir="rtl">
+      <div class="cusin-excel-actions__item">
+        <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_import' %}?mode=full">
+          ورود محصولات از اکسل
+        </a>
+        <span class="cusin-excel-actions__templates">
+          قالب:
+          <a href="{% url 'admin:products_product_import_template' %}?format=xlsx">Excel</a>
+          |
+          <a href="{% url 'admin:products_product_import_template' %}">CSV</a>
+        </span>
+      </div>
+      <div class="cusin-excel-actions__item">
+        <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_import' %}?mode=update">
+          به‌روزرسانی قیمت و موجودی
+        </a>
+        <span class="cusin-excel-actions__templates">
+          قالب:
+          <a href="{% url 'admin:products_product_update_template' %}?format=xlsx">Excel</a>
+          |
+          <a href="{% url 'admin:products_product_update_template' %}">CSV</a>
+        </span>
+      </div>
+      <div class="cusin-excel-actions__item">
+        <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_export' %}?format=xlsx">
+          خروجی اکسل
+        </a>
+        <span class="cusin-excel-actions__templates">
+          <a href="{% url 'admin:products_product_export' %}">خروجی CSV</a>
+        </span>
+      </div>
+      <div class="cusin-excel-actions__item">
+        <a class="cusin-excel-actions__button" href="{% url 'admin:products_product_image_import' %}">
+          ورود گروهی تصاویر (فایل زیپ)
+        </a>
+        <span class="cusin-excel-actions__templates">
+          نام فایل = کد کالا؛ مثل <code dir="ltr">SOOLE-001.jpg</code> و
+          <code dir="ltr">SOOLE-001-2.jpg</code> — توضیح کامل:
+          <a href="{% url 'admin:products_product_image_import' %}#cusin-image-import-help">راهنمای نام‌گذاری</a>
+        </span>
+      </div>
+    </div>
+  </details>
 {% endblock %}
+
+{% block object-tools %}{% endblock %}

@@ -16,6 +16,7 @@ export const STYLE_IMPORTS = [
   "styles/globals.css",
   "styles/storefront.css",
   "styles/responsive-variants.css",
+  "styles/design-system.css",
 ];
 
 /** Phone breakpoint used by the storefront: phones are <= 767px. */

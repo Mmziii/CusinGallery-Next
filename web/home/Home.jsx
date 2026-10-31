@@ -47,7 +47,9 @@ export default function Home({ initialData, content }) {
                     image component -- a category without an image (or with
                     a broken file) shows our logo placeholder, never an
                     empty span or a broken-image icon. */}
-                <SmartImage image={category.image} alt={category.name} />
+                <span className="category-card__media">
+                  <SmartImage image={category.image} alt="" sizes="(max-width: 767px) 31vw, 180px" />
+                </span>
                 <span className="category-card__name">{category.name}</span>
               </Link>
             ))}
