@@ -23,6 +23,7 @@ import { isValidIranianPhone, normalizePhone } from "../utils/iranianFields";
 import { recordView } from "../utils/recentlyViewed";
 import { productDetailShape } from "../utils/shapes";
 import { trackEvent } from "../utils/behaviour";
+import useSiteContent from "../hooks/useSiteContent";
 import { errorMessage } from "../components/ui";
 
 /**
@@ -59,6 +60,7 @@ function ProductContentSection({ title, children }) {
 function ProductDetail({ product, slug, reviews = {} }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const addItem = useCartStore((s) => s.addItem);
+  const assurances = useSiteContent().trust_strip || [];
 
   const [quantity, setQuantity] = useState(1);
   const [selected, setSelected] = useState({}); // attribute name -> value
@@ -302,6 +304,20 @@ function ProductDetail({ product, slug, reviews = {} }) {
 
           {added && added.error ? <Alert>{errorMessage(added.error)}</Alert> : null}
           {typeof added === "string" ? <Alert kind="success">{added}</Alert> : null}
+
+          {/* Purchase assurances next to the buy decision: the owner's own
+              trust items (site content, same list as the homepage strip);
+              an empty owner list renders nothing. */}
+          {assurances.length ? (
+            <ul className="product-detail__assurances" aria-label="مزایای خرید">
+              {assurances.map(({ icon, label }) => (
+                <li key={label}>
+                  <Icon name={icon} size={18} />
+                  <span>{label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           <div className="product-detail__content">
             <ProductContentSection title="توضیحات">

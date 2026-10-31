@@ -1,0 +1,216 @@
+/* ==========================================================================
+   کازین گالری — Admin brand layer (redesign/ui-ux)
+
+   Loads AFTER theme.css (see templates/admin/base.html). theme.css keeps
+   every structural and behavioural rule it has accumulated (sticky offsets,
+   drawer mechanics, table width maps, phone card layout, 44px targets);
+   this file only re-skins it so the panel belongs to the same brand as the
+   storefront:
+
+   - warm neutrals (ivory-grey page, warm hairlines) instead of cool SaaS
+     greys — the same family as the storefront's ivory/porcelain;
+   - the navigation drawer is the brand surface: deep olive with ivory
+     labels and a gold indicator on the current destination, exactly like
+     the storefront header;
+   - olive stays the ONE action color; secondary tools (Excel import/export)
+     are outlined so «افزودن محصول» and «ذخیره» are the obvious next step;
+   - status badges keep their wording; color only reinforces it.
+
+   Contrast (measured): ivory #FAF7F0 on #2F3A18 11.4:1 · ivory 72% on
+   #2F3A18 6.6:1 · gold #CEB464 on #2F3A18 5.9:1 · #545A47 on #FFFFFF 7.1:1 ·
+   field border #8F887A on #FFFFFF 3.5:1 (non-text 3:1).
+   ========================================================================== */
+
+:root {
+  --cg-olive-dark: #2F3A18;
+  --cg-ivory: #FAF7F0;
+
+  --cusin-bg: #F6F4EE;
+  --cusin-surface-2: #F6F4EE;
+  --cusin-accent-bg: #EEF1E4;
+  --cusin-border: #E2DDCF;
+  --cusin-border-strong: #8F887A;
+  --cusin-muted: #545A47;
+  --cg-muted-text: #545A47;
+  --cusin-shadow: 0 1px 2px rgba(47, 58, 24, 0.05), 0 10px 28px -18px rgba(47, 58, 24, 0.28);
+  --cusin-radius: 14px;
+  --cusin-radius-sm: 10px;
+
+  --darkened-bg: #F6F4EE;
+  --selected-bg: #EEF1E4;
+  --hairline-color: #E2DDCF;
+}
+
+body.cusin-admin { background: var(--cusin-bg); }
+
+/* ------------------------------------------------------------------ Topbar */
+#header.cusin-topbar-wrap {
+  border-bottom: 1px solid var(--cusin-border);
+  box-shadow: 0 1px 0 rgba(206, 180, 100, 0.35);
+}
+.cusin-brand a { color: var(--cg-olive-dark); font-weight: 800; }
+.cusin-brand-mark { color: var(--cg-olive); }
+.cusin-search-trigger { background: #FFFFFF; border-color: var(--cusin-border); }
+.cusin-search-trigger:hover { border-color: var(--cg-olive); }
+
+/* ------------------------------------------------- Navigation drawer (olive) */
+/* Specificity matches the «Follow-up 5» ink rule in theme.css, which this
+   file deliberately supersedes for the drawer only (menus stay ink). */
+body.cusin-admin #container #cusin-drawer.cusin-drawer {
+  background: var(--cg-olive-dark);
+  color: var(--cg-ivory);
+  border-inline-end: 0;
+  scrollbar-color: rgba(206, 180, 100, 0.4) transparent;
+}
+body.cusin-admin #container #cusin-drawer .cusin-drawer-head {
+  color: var(--cg-ivory);
+  border-bottom-color: rgba(206, 180, 100, 0.28);
+}
+body.cusin-admin #container #cusin-drawer .cusin-drawer-head small { color: rgba(250, 247, 240, 0.72); }
+body.cusin-admin #container #cusin-drawer .cusin-drawer-dash:not(.is-active),
+body.cusin-admin #container #cusin-drawer .cusin-nav-group > summary,
+body.cusin-admin #container #cusin-drawer .cusin-nav-link:not(.is-active),
+body.cusin-admin #container #cusin-drawer .cusin-drawer-foot a,
+body.cusin-admin #container #cusin-drawer .cusin-nav-add {
+  color: rgba(250, 247, 240, 0.9);
+}
+body.cusin-admin #container #cusin-drawer .cusin-nav-caret { color: rgba(250, 247, 240, 0.6); }
+body.cusin-admin #container #cusin-drawer .cusin-drawer-dash:hover,
+body.cusin-admin #container #cusin-drawer .cusin-nav-group > summary:hover,
+body.cusin-admin #container #cusin-drawer .cusin-nav-link:hover,
+body.cusin-admin #container #cusin-drawer .cusin-nav-add:hover,
+body.cusin-admin #container #cusin-drawer .cusin-drawer-foot a:hover {
+  background: rgba(250, 247, 240, 0.08);
+  color: #FFFFFF;
+}
+body.cusin-admin #container #cusin-drawer .cusin-drawer-dash.is-active,
+body.cusin-admin #container #cusin-drawer .cusin-nav-link.is-active {
+  background: rgba(206, 180, 100, 0.14);
+  color: var(--cg-gold);
+  border-inline-start: 3px solid var(--cg-gold);
+}
+body.cusin-admin #container #cusin-drawer .cusin-nav-group.is-active > summary { color: #FFFFFF; }
+body.cusin-admin #container #cusin-drawer .cusin-nav-group--advanced,
+body.cusin-admin #container #cusin-drawer .cusin-drawer-foot { border-top-color: rgba(206, 180, 100, 0.22); }
+body.cusin-admin #container #cusin-drawer .cusin-nav-group--advanced > summary { color: rgba(250, 247, 240, 0.72); }
+body.cusin-admin #container #cusin-drawer .cusin-nav-empty { color: rgba(250, 247, 240, 0.72); }
+body.cusin-admin #container #cusin-drawer :focus-visible { outline-color: var(--cg-gold); }
+/* ----------------------------------------------------------- Page titles */
+#content h1 { color: var(--cg-olive-dark); font-weight: 800; letter-spacing: 0; }
+#content h2 { color: var(--cg-olive-dark); }
+
+/* -------------------------------------------------------------- Buttons */
+/* Secondary tools: Excel import/export/update are outlined, so the primary
+   olive actions (add, save, apply) are the strongest thing on the page. */
+body.cusin-admin .cusin-excel-actions a.cusin-excel-actions__button,
+body.cusin-admin .cusin-excel-actions a.cusin-excel-actions__button:visited {
+  background: #FFFFFF;
+  color: var(--cg-olive-dark);
+  border: 1px solid var(--cusin-border-strong);
+  box-shadow: none;
+}
+body.cusin-admin .cusin-excel-actions a.cusin-excel-actions__button:hover,
+body.cusin-admin .cusin-excel-actions a.cusin-excel-actions__button:focus-visible {
+  background: var(--cusin-accent-bg);
+  color: var(--cg-olive-dark);
+  border-color: var(--cg-olive);
+}
+.object-tools a,
+.object-tools button,
+.submit-row input,
+.submit-row button,
+.submit-row a,
+.button,
+input[type="submit"],
+input[type="button"],
+.cusin-btn {
+  border-radius: var(--cusin-radius-sm);
+  transition: background-color 160ms var(--cusin-ease), border-color 160ms var(--cusin-ease), transform 80ms ease;
+}
+.object-tools a:active,
+.submit-row input:active,
+.cusin-btn:active { transform: scale(0.98); }
+
+/* ---------------------------------------------------------------- Cards */
+.module,
+.cusin-card,
+.cusin-summary-card,
+fieldset.module,
+.inline-group {
+  border-color: var(--cusin-border);
+  border-radius: var(--cusin-radius);
+}
+.cusin-card,
+.cusin-summary-card { box-shadow: none; }
+.cusin-card-head h2,
+.module h2,
+.module caption,
+fieldset.module > h2 {
+  color: var(--cg-olive-dark);
+  font-weight: 800;
+}
+.module h2,
+.module caption,
+.inline-group h2 { background: #FBFAF6; border-bottom: 1px solid var(--cusin-border); }
+.cusin-kpi { border-color: var(--cusin-border); background: #FFFFFF; }
+.cusin-kpi-value { color: var(--cg-olive-dark); }
+
+/* --------------------------------------------------------------- Tables */
+#result_list thead th,
+.inline-group thead th {
+  background: #FBFAF6;
+  color: var(--cusin-muted);
+  border-bottom: 1px solid var(--cusin-border);
+}
+#result_list thead th a { color: var(--cusin-muted); }
+#result_list tbody tr:hover td,
+#result_list tbody tr:hover th { background: #FBFAF4; }
+#result_list tbody tr.selected td,
+#result_list tbody tr.selected th { background: var(--cusin-accent-bg); }
+
+/* ---------------------------------------------------------------- Forms */
+body.cusin-admin input[type="text"],
+body.cusin-admin input[type="number"],
+body.cusin-admin input[type="email"],
+body.cusin-admin input[type="url"],
+body.cusin-admin input[type="password"],
+body.cusin-admin input[type="search"],
+body.cusin-admin input[type="tel"],
+body.cusin-admin select,
+body.cusin-admin textarea {
+  border-color: var(--cusin-border-strong);
+  border-radius: var(--cusin-radius-sm);
+  background-color: #FFFFFF;
+}
+body.cusin-admin input:focus,
+body.cusin-admin select:focus,
+body.cusin-admin textarea:focus {
+  border-color: var(--cg-olive);
+  box-shadow: 0 0 0 3px rgba(99, 112, 55, 0.2);
+  outline: 2px solid transparent;
+}
+body.cusin-admin input[type="checkbox"],
+body.cusin-admin input[type="radio"] { accent-color: var(--cg-olive); }
+.help, .helptext, div.help { color: var(--cusin-muted); }
+
+/* ------------------------------------------------------------- Messages */
+ul.messagelist li { border-radius: var(--cusin-radius-sm); }
+
+/* ---------------------------------------------------------------- Login */
+body.login {
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(99, 112, 55, 0.16) 0%, rgba(246, 244, 238, 0) 70%),
+    var(--cusin-bg);
+}
+body.login #content-main {
+  border-top: 3px solid var(--cg-gold);
+  box-shadow: 0 24px 48px -28px rgba(47, 58, 24, 0.4);
+}
+body.login .cusin-brand a,
+body.login .cusin-brand-mark { color: var(--cg-olive-dark); }
+
+@media (prefers-reduced-motion: reduce) {
+  .object-tools a:active,
+  .submit-row input:active,
+  .cusin-btn:active { transform: none; }
+}

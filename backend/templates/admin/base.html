@@ -29,6 +29,8 @@ Lowest-risk overlay strategy:
 {% endblock %}
 {# Brand theme: loads AFTER stock stylesheets so it wins the cascade. #}
 <link rel="stylesheet" href="{% static "admin_theme/css/theme.css" %}">
+{# Brand layer: warm neutrals + olive drawer, see the file header. #}
+<link rel="stylesheet" href="{% static "admin_theme/css/brand.css" %}">
 {% block blockbots %}<meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
 </head>
 

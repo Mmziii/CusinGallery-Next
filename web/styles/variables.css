@@ -19,6 +19,9 @@
   --brand-gold: #CEB464;
   --brand-gold-deep: #8A6D1F;
   --brand-ivory: #FAF7F0;
+  /* warm field behind product photography (design-system.css): soft enough
+     that clear glass keeps its edges, never pure white */
+  --brand-porcelain: #F3EFE6;
   --brand-ink: #1E2412;
 
   /* --- Color (semantic aliases over the brand) --- */
@@ -26,7 +29,7 @@
   --color-surface: #ffffff;
   --color-text: var(--brand-ink);
   --color-text-muted: #5f6552;
-  --color-border: #e4e0d0;
+  --color-border: #E5DFD0;
 
   --color-primary: var(--brand-green);
   --color-primary-dark: var(--brand-green-mid);

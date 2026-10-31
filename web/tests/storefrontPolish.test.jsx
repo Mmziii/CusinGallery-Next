@@ -181,40 +181,31 @@ describe("storefront polish: CSS cascade", () => {
     }
   });
 
-  it("9. home categories: desktop grid adapts to category count (auto-fit); phone last odd tile spans both columns", () => {
+  it("9. home categories: desktop grid adapts to category count (auto-fit); phones wrap a centred three-up shelf", () => {
     for (const width of DESKTOP) {
       expect(valueOf(".category-grid", width, "grid-template-columns")).toContain("auto-fit");
     }
-    expect(valueOf(".category-grid", 375, "grid-template-columns")).toBe("repeat(2, 1fr)");
     for (const width of PHONE) {
-      expect(valueOf(".category-card:last-child:nth-child(odd)", width, "grid-column")).toBe(
-        "1 / -1"
-      );
+      // Redesign (design-system.css): niches never stretch into a wide arch.
+      // A short last row is centred by flex-wrap instead of spanning the row.
+      expect(valueOf(".category-grid", width, "display")).toBe("flex");
+      expect(valueOf(".category-grid", width, "flex-wrap")).toBe("wrap");
+      expect(valueOf(".category-grid", width, "justify-content")).toBe("center");
+      expect(valueOf(".category-card:last-child:nth-child(odd)", width, "grid-column")).toBe("auto");
     }
   });
 
-  it("10. phone categories: normal tiles are square; spanning last odd tile keeps the row height", () => {
+  it("10. phone categories: every niche is the same size, including a last odd one", () => {
     for (const width of [320, 375, 414]) {
-      // Normal tiles: square (aspect-ratio 1), no fixed height.
-      expect(valueOf(".category-card", width, "aspect-ratio")).toBe("1");
+      // The card itself has no ratio or fixed height; the arched media box
+      // owns the shape, so the label below can wrap without clipping.
+      expect(valueOf(".category-card", width, "aspect-ratio")).toBe("auto");
       expect(valueOf(".category-card", width, "height")).toBeNull();
-      // Spanning last odd tile: two columns wide (aspect-ratio 2 / 1),
-      // no fixed height — its height stays within one gap of a normal tile.
-      expect(
-        valueOf(".category-card:last-child:nth-child(odd)", width, "aspect-ratio")
-      ).toBe("2 / 1");
-      expect(
-        valueOf(".category-card:last-child:nth-child(odd)", width, "height")
-      ).toBeNull();
-
-      // Computed heights from the resolved grid: normal tile width =
-      // (W - gap) / 2 with aspect 1 → height = (W - gap) / 2.
-      // Spanning tile width = W with aspect 2 / 1 → height = W / 2.
-      // Difference is exactly gap / 2 = 8px (<= 8px at every phone width).
-      const gap = 16; // var(--space-3)
-      const normalHeight = (width - gap) / 2;
-      const spanningHeight = width / 2;
-      expect(Math.abs(normalHeight - spanningHeight)).toBeLessThanOrEqual(8);
+      expect(valueOf(".category-card__media", width, "aspect-ratio")).toBe("4 / 5");
+      const basis = valueOf(".category-card", width, "flex");
+      expect(basis).toBe("0 0 calc((100% - 20px) / 3)");
+      expect(valueOf(".category-card:last-child:nth-child(odd)", width, "flex")).toBe(basis);
+      expect(valueOf(".category-card:last-child:nth-child(odd)", width, "aspect-ratio")).toBe("auto");
     }
   });
 

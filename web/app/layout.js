@@ -4,6 +4,7 @@ import "../styles/variables.css";
 import "../styles/globals.css";
 import "../styles/storefront.css";
 import "../styles/responsive-variants.css";
+import "../styles/design-system.css";
 import { AuthProvider } from "../store/useAuthStore";
 import { probeUser } from "../lib/auth-server";
 import { isPrivatePath, isProtectedPath } from "../lib/auth-navigation";
