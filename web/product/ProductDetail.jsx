@@ -204,7 +204,13 @@ function ProductDetail({ product, slug, reviews = {} }) {
           <PriceTag priceInfo={displayPrice} size="lg" />
 
           <span className={`stock stock--${stockStatus}`}>
-            {outOfStock ? "ناموجود" : stockStatus === "low_stock" ? "تعداد محدود" : "موجود در انبار"}
+            {outOfStock
+              ? "ناموجود"
+              : stockStatus === "low_stock"
+                ? Number.isFinite(availableStock) && availableStock > 0
+                  ? `فقط ${faDigits(availableStock)} عدد مانده`
+                  : "تعداد محدود"
+                : "موجود در انبار"}
           </span>
 
           {hasVariants ? (

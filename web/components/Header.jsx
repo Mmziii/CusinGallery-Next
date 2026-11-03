@@ -13,6 +13,7 @@ import SmartImage from "./SmartImage";
 import useFocusTrap from "../hooks/useFocusTrap";
 import useSiteContent from "../hooks/useSiteContent";
 import useAuthStore from "../store/useAuthStore";
+import { BOTTOM_NAV_EVENT } from "./BottomNav";
 import useCartStore from "../store/useCartStore";
 import { getCategoryTree, listProducts } from "../services/catalogApi";
 import { catalogGroups } from "../utils/categories";
@@ -232,6 +233,27 @@ function Header() {
   useEffect(() => {
     if (!isAuthenticated && guestLines.length > 0) hydrateGuestProducts();
   }, [isAuthenticated, guestLines, hydrateGuestProducts]);
+
+  // Phone bottom tab bar (BottomNav): its «دسته‌ها», «جستجو» and «سبد» tabs
+  // reuse this header's drawer, search field and mini-cart.
+  useEffect(() => {
+    const onBottomNav = (event) => {
+      const action = event.detail?.action;
+      if (action === "menu") openMenu();
+      else if (action === "cart") setCartOpen(true);
+      else if (action === "search") {
+        if (rowCollapsedRef.current) {
+          searchRevealedRef.current = true;
+          setSearchRevealed(true);
+          searchInputRef.current?.focus();
+        } else {
+          searchInputRef.current?.focus();
+        }
+      }
+    };
+    window.addEventListener(BOTTOM_NAV_EVENT, onBottomNav);
+    return () => window.removeEventListener(BOTTOM_NAV_EVENT, onBottomNav);
+  }, [openMenu]);
 
   // The collapsed row's search icon reveals the field; focus follows so the
   // phone keyboard is already up. (React commits the class change before
