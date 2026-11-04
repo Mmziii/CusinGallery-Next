@@ -243,9 +243,12 @@ function Header() {
       else if (action === "cart") setCartOpen(true);
       else if (action === "search") {
         if (rowCollapsedRef.current) {
-          searchRevealedRef.current = true;
-          setSearchRevealed(true);
-          searchInputRef.current?.focus();
+          // Folded phone header: the tab toggles the search row, the same
+          // way the (hidden on phones) header search icon did.
+          const next = !searchRevealedRef.current;
+          searchRevealedRef.current = next;
+          setSearchRevealed(next);
+          if (!next) searchInputRef.current?.blur();
         } else {
           searchInputRef.current?.focus();
         }
