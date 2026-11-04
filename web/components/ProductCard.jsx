@@ -48,6 +48,13 @@ function ProductCard({ product }) {
 
   const outOfStock = product.stock_status === "out_of_stock";
   const lowStock = product.stock_status === "low_stock";
+  // Exact "only N left" when the API gives a positive count; the generic
+  // label stays for products without one (e.g. variant-only stock).
+  const stockLeft = Number(product.stock_quantity);
+  const lowStockLabel =
+    Number.isFinite(stockLeft) && stockLeft > 0
+      ? `فقط ${faDigits(stockLeft)} عدد مانده`
+      : "تعداد محدود";
   const images = product.images || [];
   const primary = product.primary_image?.image || images[0]?.image || null;
   const secondary = images.find((img) => img.image !== primary)?.image || null;
@@ -105,7 +112,7 @@ function ProductCard({ product }) {
       {discountPercentage > 0 ? (
         <span className="badge badge--sale">{faDigits(discountPercentage)}٪</span>
       ) : null}
-      {lowStock ? <span className="badge badge--low">تعداد محدود</span> : null}
+      {lowStock ? <span className="badge badge--low">{lowStockLabel}</span> : null}
       {outOfStock ? <span className="badge badge--oos">ناموجود</span> : null}
     </span>
   );

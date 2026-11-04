@@ -3665,3 +3665,51 @@ input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appe
 
   .sheet__close { width: 44px; height: 44px; min-width: 44px; min-height: 44px; }
 }
+
+/* --- Phone bottom tab bar (components/BottomNav.jsx) -------------------
+   Hidden by default; phones only. `app-shell--tabbar` is server-rendered by
+   MainLayout on the routes that show the bar, so the header's duplicate
+   cart / account / search buttons are already hidden in the first paint
+   and the page reserves room for the bar (no layout shift). */
+.bottom-nav { display: none; }
+@media (max-width: 767px) {
+  .bottom-nav {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 105;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -6px 18px rgba(30, 36, 18, .08);
+  }
+  .bottom-nav__item {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    min-height: 52px; padding: 4px 2px;
+    background: none; border: 0; border-radius: 10px;
+    color: var(--color-text-muted); font: inherit; font-size: 12px; font-weight: 600; line-height: 1.3;
+    text-decoration: none; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav__item[aria-current="page"] { color: var(--brand-green-dark); }
+  .bottom-nav__item[aria-current="page"] .icon { color: var(--brand-green); }
+  .bottom-nav__item:active { background: var(--brand-green-tint); }
+  .bottom-nav__item:focus-visible { outline: 2px solid var(--brand-gold-deep); outline-offset: -2px; }
+  .bottom-nav__badge {
+    position: absolute; top: 3px; inset-inline-start: calc(50% + 4px);
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+    display: grid; place-items: center;
+    background: var(--brand-gold); color: var(--brand-green-dark);
+    font-size: 11px; font-weight: 800; line-height: 1;
+  }
+
+  /* Room for the bar, and lift the floating contact button and toasts above it. */
+  .app-shell--tabbar { padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); }
+  .app-shell--tabbar .floating-contact { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .app-shell--tabbar .toaster { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+  /* One cart, one account entry and one search trigger on phones: the bar's. */
+  .app-shell--tabbar .site-header .cart-link,
+  .app-shell--tabbar .site-header .user-menu,
+  .app-shell--tabbar .site-header .site-header__login,
+  .app-shell--tabbar .site-header .site-header__search-toggle { display: none; }
+}

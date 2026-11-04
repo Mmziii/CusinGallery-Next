@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "../lib/navigation";
 
+import BottomNav, { showBottomNav } from "../components/BottomNav";
 import ErrorBoundary from "../components/ErrorBoundary";
 import FloatingContact from "../components/FloatingContact";
 import Icon from "../components/Icon";
@@ -63,7 +64,7 @@ function MainLayout({ children }) {
   }, [location.pathname]);
 
   return (
-    <div className="app-shell">
+    <div className={showBottomNav(location.pathname) ? "app-shell app-shell--tabbar" : "app-shell"}>
       <Header />
       <MergeNotice />
 
@@ -81,6 +82,7 @@ function MainLayout({ children }) {
 
       <Footer />
       <FloatingContact />
+      <BottomNav />
       <Toaster />
     </div>
   );
